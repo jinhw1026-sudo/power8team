@@ -1,0 +1,3469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>파워지점 8팀 활동 관리</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Noto Sans KR',sans-serif;font-size:14px;background:#f4f5f7;color:#1a1a2e}
+:root{
+  --primary:#1a4fa0;--primary-light:#e8f0fd;--primary-dark:#0e3278;
+  --success:#1a7a4a;--success-light:#e6f4ed;
+  --warning:#a05c0a;--warning-light:#fdf2e3;
+  --danger:#a01a1a;--danger-light:#fde8e8;
+  --purple:#7c3aed;--purple-light:#f0ebff;
+  --gray-50:#f8f9fa;--gray-100:#f1f3f5;--gray-200:#e9ecef;--gray-300:#dee2e6;
+  --gray-500:#868e96;--gray-700:#495057;--gray-900:#1a1a2e;
+  --sidebar-w:220px;--radius:8px;--radius-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 12px rgba(0,0,0,.1);
+}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#dee2e6;border-radius:10px}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0e3278,#1a4fa0,#2563c7)}
+.login-card{background:#fff;border-radius:20px;padding:40px 36px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo .icon{width:52px;height:52px;background:var(--primary-light);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px}
+.login-logo h1{font-size:20px;font-weight:600}
+.login-logo p{font-size:12px;color:var(--gray-500);margin-top:4px}
+.role-tabs{display:flex;background:var(--gray-100);border-radius:var(--radius);padding:3px;margin-bottom:20px;gap:3px}
+.role-tab{flex:1;text-align:center;padding:7px;font-size:13px;border-radius:6px;cursor:pointer;color:var(--gray-500);transition:all .2s;font-weight:500}
+.role-tab.active{background:#fff;color:var(--primary);box-shadow:var(--shadow)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:500;color:var(--gray-700);margin-bottom:5px}
+.form-group input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;outline:none;transition:border .2s;background:#fafafa}
+.form-group input:focus{border-color:var(--primary);background:#fff}
+.login-btn{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.login-btn:hover{background:var(--primary-dark)}
+.login-err{font-size:12px;color:var(--danger);margin-top:8px;text-align:center;min-height:16px}
+#app{display:none;height:100vh;overflow:hidden}
+.layout{display:flex;height:100%}
+.sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;flex-shrink:0;height:100vh;position:fixed;left:0;top:0;z-index:100}
+.sidebar-head{padding:18px 16px 14px;border-bottom:1px solid var(--gray-100)}
+.sidebar-head .team{font-size:14px;font-weight:600;color:var(--primary)}
+.sidebar-head .subteam{font-size:11px;color:var(--gray-500);margin-top:2px}
+.user-info{display:flex;align-items:center;gap:8px;margin-top:10px}
+.s-avatar{width:30px;height:30px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--primary);flex-shrink:0}
+.uname{font-size:13px;font-weight:500}
+.urole{font-size:11px;color:var(--gray-500)}
+.nav-group-label{padding:14px 16px 4px;font-size:10px;font-weight:600;color:var(--gray-500);letter-spacing:.06em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;color:var(--gray-700);transition:all .15s;white-space:nowrap}
+.nav-item:hover{background:var(--gray-100)}
+.nav-item.active{background:var(--primary-light);color:var(--primary)}
+.sidebar-footer{margin-top:auto;padding:12px 8px;border-top:1px solid var(--gray-100)}
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:56px;background:#fff;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
+.topbar h2{font-size:16px;font-weight:600}
+.topbar .sub{font-size:12px;color:var(--gray-500);margin-top:1px}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.page{display:none}
+.page.active{display:block}
+.card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--primary);flex-shrink:0}
+.form-row{display:grid;gap:10px;margin-bottom:10px}
+.form-row.col2{grid-template-columns:1fr 1fr}
+.form-row.col3{grid-template-columns:1fr 1fr 1fr}
+.form-row.col1{grid-template-columns:1fr}
+.field-label{font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px}
+.field-label .req{color:#e03030}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:13px;font-family:inherit;outline:none;transition:border .2s;background:#fafafa;color:var(--gray-900)}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);background:#fff}
+textarea{resize:vertical;min-height:56px;line-height:1.6}
+.tab-bar{display:flex;gap:4px;margin-bottom:16px;background:var(--gray-100);padding:3px;border-radius:var(--radius);width:fit-content}
+.tab-btn{padding:7px 18px;font-size:13px;font-weight:500;border-radius:6px;cursor:pointer;color:var(--gray-500);transition:all .2s;white-space:nowrap}
+.tab-btn.active{background:#fff;color:var(--primary);box-shadow:var(--shadow)}
+.badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:2px 9px;border-radius:10px}
+.badge.green{background:var(--success-light);color:var(--success)}
+.badge.blue{background:var(--primary-light);color:var(--primary)}
+.badge.amber{background:var(--warning-light);color:var(--warning)}
+.badge.red{background:var(--danger-light);color:var(--danger)}
+.badge.purple{background:var(--purple-light);color:var(--purple)}
+.badge.gray{background:var(--gray-100);color:var(--gray-500)}
+.funnel-wrap{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.funnel-btn{font-size:12px;padding:4px 12px;border-radius:12px;cursor:pointer;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-500);transition:all .15s;font-weight:500}
+.funnel-btn.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+.funnel-arrow{font-size:12px;color:var(--gray-300)}
+.result-tabs{display:flex;gap:6px}
+.res-btn{padding:5px 16px;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-500);transition:all .15s}
+.res-btn.active-close{background:var(--success-light);color:var(--success);border-color:var(--success)}
+.res-btn.active-reject{background:var(--danger-light);color:var(--danger);border-color:var(--danger)}
+.res-btn.active-hold{background:var(--warning-light);color:var(--warning);border-color:var(--warning)}
+.consult-block{border:1.5px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.consult-block:focus-within{border-color:var(--primary)}
+.consult-block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.consult-num{font-size:12px;font-weight:600;color:var(--primary)}
+.consult-del{font-size:12px;color:var(--gray-500);cursor:pointer;padding:3px 8px;border-radius:4px;border:1px solid var(--gray-200);background:#fff;font-family:inherit}
+.consult-del:hover{color:var(--danger);border-color:var(--danger)}
+.closing-box{background:var(--primary-light);border-radius:var(--radius);padding:12px;margin-top:10px;border:1px solid rgba(26,79,160,.15)}
+.closing-box-title{font-size:12px;font-weight:600;color:var(--primary);margin-bottom:10px}
+.rp-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.rp-chip{padding:4px 11px;border-radius:12px;font-size:12px;cursor:pointer;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-500);transition:all .15s;font-weight:500}
+.rp-chip.on{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+.check-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gray-700);cursor:pointer;padding:5px 8px;border-radius:6px;margin-bottom:4px}
+.check-row:hover{background:var(--gray-50)}
+.check-row input[type=checkbox]{width:15px;height:15px;accent-color:var(--primary);flex-shrink:0}
+.star-row{display:flex;gap:2px}
+.star{font-size:20px;cursor:pointer;color:var(--gray-200);transition:color .1s;line-height:1}
+.star.on{color:#f0a500}
+.cstar{font-size:16px;cursor:default;color:var(--gray-200);line-height:1}
+.cstar.on{color:#f0a500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid transparent;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-outline{background:#fff;color:var(--gray-700);border-color:var(--gray-200)}
+.btn-outline:hover{background:var(--gray-50)}
+.btn-danger{background:var(--danger-light);color:var(--danger)}
+.btn-success{background:var(--success-light);color:var(--success);border-color:var(--success)}
+.btn-full{width:100%;padding:11px}
+.btn-sm{padding:5px 12px;font-size:12px}
+.add-consult-btn{width:100%;padding:9px;border:1.5px dashed var(--gray-300);border-radius:var(--radius);background:#fff;color:var(--gray-500);font-size:13px;font-weight:500;cursor:pointer;margin-top:4px;transition:all .2s;font-family:inherit}
+.add-consult-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
+/* 대시보드 멤버카드 */
+.member-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow)}
+.member-card-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);cursor:pointer}
+.member-card-head:hover{background:#eef0f3}
+.m-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--primary);flex-shrink:0}
+.m-name{font-size:14px;font-weight:600}
+.m-sub{font-size:11px;color:var(--gray-500);margin-top:2px}
+.member-card-body{padding:14px 16px;display:none}
+.member-card-body.open{display:block}
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.metric-box{background:var(--gray-50);border-radius:var(--radius);padding:10px;text-align:center}
+.metric-label{font-size:10px;color:var(--gray-500);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.metric-val{font-size:18px;font-weight:600;color:var(--gray-900)}
+.metric-val.blue{color:var(--primary)}
+.metric-val.green{color:var(--success)}
+.metric-val.amber{color:var(--warning)}
+/* 손보 미니바 */
+.nonlife-mini{display:flex;gap:3px;align-items:flex-end;height:40px}
+.nl-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px}
+.nl-bar{width:100%;border-radius:2px 2px 0 0}
+.nl-bar.filled{background:var(--primary)}
+.nl-bar.empty{background:var(--gray-200)}
+.nl-lbl{font-size:8px;color:var(--gray-500)}
+/* 랭킹 */
+.rank-table{width:100%;border-collapse:collapse}
+.rank-table th{font-size:11px;font-weight:600;color:var(--gray-500);text-align:left;padding:6px 10px;border-bottom:2px solid var(--gray-200)}
+.rank-table td{padding:9px 10px;border-bottom:1px solid var(--gray-100);font-size:13px;vertical-align:middle}
+.rank-table tr:last-child td{border-bottom:none}
+.rank-table tr:hover td{background:var(--gray-50)}
+.rank-num{font-size:15px;font-weight:700;color:var(--gray-300);width:30px}
+.rank-num.gold{color:#f0a500}
+.rank-num.silver{color:#868e96}
+.rank-num.bronze{color:#a05c0a}
+/* 프로그레스 */
+.prog-wrap{background:var(--gray-200);border-radius:6px;height:8px;overflow:hidden;margin-top:4px}
+.prog-bar{height:8px;border-radius:6px;background:var(--primary);transition:width .5s ease}
+.prog-bar.green{background:var(--success)}
+/* 계보도 */
+.tree-container{overflow-x:auto;padding:16px;min-height:120px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200)}
+.tree-level{display:flex;gap:12px;justify-content:center;position:relative;margin-bottom:0}
+.tree-node-wrap{display:flex;flex-direction:column;align-items:center}
+.tree-connector-v{width:2px;height:20px;background:var(--gray-300);margin:0 auto}
+.tree-connector-h{height:2px;background:var(--gray-300);position:absolute;top:0}
+.tree-children-wrap{display:flex;gap:24px;position:relative;padding-top:20px}
+.tree-children-wrap::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:2px;height:20px;background:var(--gray-300)}
+.tree-box{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s;text-align:center;min-width:70px}
+.tree-box.root{background:var(--primary);color:#fff;border:2px solid var(--primary)}
+.tree-box.member{background:var(--primary-light);color:var(--primary);border:1.5px solid var(--primary)}
+.tree-box.client{background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-300)}
+.tree-box.client:hover{border-color:var(--primary);background:var(--primary-light)}
+.tree-box-sub{font-size:10px;font-weight:400;margin-top:2px;opacity:.8}
+/* 토스트 */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{padding:10px 16px;border-radius:var(--radius);font-size:13px;font-weight:500;box-shadow:var(--shadow-md);animation:slideIn .3s ease;color:#fff}
+.toast.success{background:#1a7a4a}
+.toast.error{background:#a01a1a}
+.toast.info{background:var(--primary)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;z-index:9998}
+.spinner{width:36px;height:36px;border:3px solid var(--gray-200);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray-500)}
+.empty-state .ei{font-size:32px;margin-bottom:8px}
+.rate-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-100)}
+.rate-row:last-child{border-bottom:none}
+.rate-company{width:160px;font-size:13px;color:var(--gray-700);font-weight:500}
+.section-divider{height:1px;background:var(--gray-100);margin:14px 0}
+.goal-section{background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.goal-title{font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px}
+/* 3W 그래프 */
+.nonlife-bar-chart{display:flex;gap:6px;align-items:flex-end;height:80px;margin-top:8px}
+.nl-chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nl-chart-bar{width:100%;border-radius:4px 4px 0 0;transition:height .4s ease;min-height:4px}
+.nl-chart-bar.filled{background:var(--primary)}
+.nl-chart-bar.empty{background:var(--gray-200)}
+.nl-chart-label{font-size:9px;color:var(--gray-500);text-align:center}
+.nl-chart-val{font-size:10px;font-weight:600;color:var(--primary)}
+/* 근무태도 복사 */
+.attitude-summary{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;font-size:13px;line-height:1.8;white-space:pre-wrap}
+.copy-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;color:var(--gray-700);transition:all .15s;font-family:inherit}
+.copy-btn:hover{border-color:var(--primary);color:var(--primary)}
+/* 날짜별 기록 */
+.history-item{border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px;overflow:hidden}
+.history-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-50);cursor:pointer}
+.history-head:hover{background:#eef0f3}
+.history-body{padding:12px 14px;display:none;font-size:13px;line-height:1.8;white-space:pre-wrap}
+.history-body.open{display:block}
+/* 입과율 색상 */
+.pct-high{color:#1a7a4a;font-weight:700}
+.pct-mid{color:#a05c0a;font-weight:600}
+.pct-low{color:var(--gray-500)}
+/* 상품 카테고리 칩 */
+.cat-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cat-chip{padding:4px 12px;border-radius:12px;font-size:12px;cursor:pointer;border:1.5px solid var(--gray-200);background:#fff;color:var(--gray-500);transition:all .15s;font-weight:500}
+.cat-chip.on{background:var(--primary-light);color:var(--primary);border-color:var(--primary)}
+
+/* ===== 모바일 반응형 ===== */
+@media(max-width:768px){
+  /* 사이드바 → 하단 탭바로 변경 */
+  .sidebar{
+    width:100%!important;height:56px;
+    position:fixed;bottom:0;top:auto;left:0;right:0;
+    flex-direction:row;border-right:none;
+    border-top:1px solid var(--gray-200);
+    z-index:200;overflow:hidden;
+  }
+  .sidebar-head{display:none}
+  .nav-group-label{display:none}
+  .sidebar-footer{display:none}
+  .sidebar .nav-item{
+    flex-direction:column;gap:2px;padding:6px 4px;
+    margin:0;border-radius:0;font-size:10px;
+    flex:1;justify-content:center;height:56px;
+    border-right:1px solid var(--gray-100);
+  }
+  .sidebar .nav-item:last-child{border-right:none}
+  .sidebar .nav-item span{font-size:18px}
+  .sidebar .nav-item.active{background:var(--primary-light);color:var(--primary)}
+  .admin-menu{display:none!important}
+  #nav-todo{display:flex!important}
+
+  /* 메인 영역 */
+  .main{margin-left:0!important;padding-bottom:56px}
+  .content{padding:12px 12px 70px}
+  .topbar{padding:0 14px}
+  .topbar h2{font-size:14px}
+  #mobileUserInfo{display:flex!important}
+
+  /* 카드 */
+  .card{padding:14px 12px;margin-bottom:12px}
+
+  /* 그리드 - 모바일에서 1열로 */
+  .form-row.col2{grid-template-columns:1fr}
+  .form-row.col3{grid-template-columns:1fr}
+  .form-row.col4{grid-template-columns:1fr 1fr}
+  .metrics-grid{grid-template-columns:1fr 1fr!important}
+
+  /* 영업탭 상단 2열 → 1열 */
+  #inputSales > div[style*="grid-template-columns:1fr 1fr"]{
+    grid-template-columns:1fr!important;
+  }
+
+  /* 탭바 */
+  .tab-bar{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab-btn{padding:6px 12px;font-size:12px}
+
+  /* 로그인 */
+  .login-card{width:92vw;padding:28px 20px}
+
+  /* 펀넬 */
+  .funnel-wrap{gap:3px}
+  .funnel-btn{font-size:11px;padding:3px 8px}
+
+  /* 결과 버튼 */
+  .result-tabs{flex-wrap:wrap}
+  .res-btn{font-size:11px;padding:4px 10px}
+
+  /* 랭킹 테이블 */
+  .rank-table th,.rank-table td{padding:6px 6px;font-size:11px}
+
+  /* 대시보드 멤버카드 */
+  .member-card-head{padding:12px}
+  .m-name{font-size:13px}
+
+  /* 사이드바 텍스트 숨기기 (아이콘만) */
+  .nav-item-text{display:block;font-size:9px;margin-top:1px}
+
+  /* 목표달성 3열 → 1열 */
+  div[style*="grid-template-columns:1fr 1fr 1fr"]{
+    grid-template-columns:1fr 1fr!important;
+  }
+
+  /* RP 칩 */
+  .rp-chip{font-size:11px;padding:3px 8px}
+  .cat-chip{font-size:11px;padding:3px 8px}
+
+  /* 복사 영역 */
+  .attitude-summary{font-size:12px}
+
+  /* 바 차트 */
+  .nonlife-bar-chart{height:60px}
+
+  /* 버튼 */
+  .btn-full{padding:12px}
+  .add-consult-btn{padding:10px}
+}
+
+@media(max-width:380px){
+  .tab-btn{padding:5px 8px;font-size:11px}
+  .content{padding:10px 8px 70px}
+}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">📋</div>
+      <h1>파워지점 8팀</h1>
+      <p>팀 활동 관리 플랫폼</p>
+    </div>
+    <div class="role-tabs">
+      <div class="role-tab" onclick="setLoginRole('admin',this)">관리자</div>
+      <div class="role-tab active" onclick="setLoginRole('member',this)">팀원</div>
+    </div>
+    <div class="form-group"><label>아이디</label><input type="text" id="loginId" placeholder="아이디 입력" /></div>
+    <div class="form-group"><label>비밀번호</label><input type="password" id="loginPw" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      <input type="checkbox" id="saveIdChk" style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer" />
+      <label for="saveIdChk" style="font-size:12px;color:var(--gray-500);cursor:pointer">아이디 저장</label>
+    </div>
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-err" id="loginErr"></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f3f5;text-align:center">
+      <p style="font-size:11px;color:#adb5bd">⚙️ Supabase 미설정 시 데모 모드로 실행</p>
+    </div>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div id="app">
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-head">
+        <div class="team">파워지점 8팀</div>
+        <div class="subteam">보험설계사 팀 관리</div>
+        <div class="user-info">
+          <div class="s-avatar" id="sideAvatar">양</div>
+          <div><div class="uname" id="sideName">양진환 부지점장</div><div class="urole" id="sideRole">관리자</div></div>
+        </div>
+      </div>
+      <div class="nav-group-label">메뉴</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard',this)"><span>📊</span> <span class="nav-item-text">팀 현황</span></div>
+      <div class="nav-item" id="nav-input" onclick="showPage('input',this)"><span>✏️</span> <span class="nav-item-text">활동 입력</span></div>
+      <div class="nav-item" id="nav-sales" onclick="showPage('sales',this)"><span>📈</span> <span class="nav-item-text">영업 현황</span></div>
+      <div class="nav-item" id="nav-todo" onclick="showPage('todo',this)"><span>📝</span> <span class="nav-item-text">오늘 할 일</span></div>
+      <div class="nav-item admin-menu" id="nav-admin" onclick="showPage('admin',this)"><span>⚙️</span> <span class="nav-item-text">관리자 설정</span></div>
+      <div class="sidebar-footer">
+        <div class="nav-item" onclick="doLogout()" style="justify-content:center"><span>🚪</span> <span class="nav-item-text">로그아웃</span></div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div><h2 id="pageTitle">팀 현황</h2><div class="sub" id="todayStr"></div></div>
+        <div id="mobileUserInfo" style="display:none;align-items:center;gap:8px">
+          <div class="s-avatar" id="mobileAvatar" style="width:28px;height:28px;font-size:11px">양</div>
+          <span style="font-size:12px;font-weight:500" id="mobileName">양진환</span>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- 팀 현황 -->
+        <div class="page active" id="page-dashboard">
+          <!-- 팀 합계 요약 -->
+          <div id="dashSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px"></div>
+          <!-- 섹션 탭 -->
+          <div class="tab-bar" style="margin-bottom:14px">
+            <div class="tab-btn active" onclick="switchDashTab('status',this)">📋 현황판</div>
+            <div class="tab-btn" onclick="switchDashTab('convention',this)">🏆 컨벤션</div>
+            <div class="tab-btn" onclick="switchDashTab('attendance',this)">📅 근태</div>
+            <div class="tab-btn" onclick="switchDashTab('lineage',this)">👥 계보</div>
+          </div>
+          <!-- 현황판 -->
+          <div id="dashStatus">
+            <div id="dashMemberCards"><div class="empty-state"><div class="ei">👥</div><p>로딩 중...</p></div></div>
+          </div>
+          <!-- 컨벤션 -->
+          <div id="dashConvention" style="display:none">
+            <div id="dashConventionContent"><div class="empty-state"><div class="ei">🏆</div><p>로딩 중...</p></div></div>
+          </div>
+          <!-- 근태 -->
+          <div id="dashAttendance" style="display:none">
+            <div id="dashAttendanceContent"><div class="empty-state"><div class="ei">📅</div><p>로딩 중...</p></div></div>
+          </div>
+          <!-- 계보 -->
+          <div id="dashLineage" style="display:none">
+            <div id="dashOrgChart" style="margin-bottom:16px"></div>
+            <div id="dashLineageContent"><div class="empty-state"><div class="ei">👥</div><p>로딩 중...</p></div></div>
+          </div>
+        </div>
+
+        <!-- 활동 입력 -->
+        <div class="page" id="page-input">
+          <div class="tab-bar">
+            <div class="tab-btn active" onclick="switchInputTab('sales',this)">🏆 영업</div>
+            <div class="tab-btn" onclick="switchInputTab('tree',this)">🌐 계보도</div>
+            <div class="tab-btn" onclick="switchInputTab('biz',this)">🏢 사업</div>
+            <div class="tab-btn" onclick="switchInputTab('attitude',this)">⏰ 근무태도</div>
+          </div>
+
+          <!-- 영업 -->
+          <div id="inputSales">
+
+
+            <!-- 생명보험 입력 -->
+            <div class="card" style="margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--gray-100)">
+                <div style="width:10px;height:10px;border-radius:50%;background:var(--primary);flex-shrink:0"></div>
+                <span style="font-size:13px;font-weight:600;color:var(--primary)">생명보험</span>
+              </div>
+              <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:500px">
+                  <thead>
+                    <tr style="background:var(--gray-50)">
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);width:22px">#</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:68px">계약자</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:68px">피보험자</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:54px">종류</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:130px">상품명</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:76px">월납</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:56px">소개자</th>
+                      <th style="padding:6px 4px;border:0.5px solid var(--gray-200);width:20px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="lifeTableBody"></tbody>
+                </table>
+              </div>
+              <button onclick="addLifeRow()" style="width:100%;padding:6px;border:0.5px dashed var(--gray-300);border-radius:var(--radius);background:transparent;color:var(--gray-500);font-size:12px;cursor:pointer;margin-top:6px;font-family:inherit">+ 행 추가</button>
+              <!-- 생명 소계 -->
+              <div id="lifeSummary" style="margin-top:10px;padding:8px 10px;background:var(--primary-light);border-radius:var(--radius);font-size:12px;display:none">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:6px">
+                  <span style="color:var(--gray-500)">클로징 <strong id="lifeClosingCount" style="color:var(--gray-900)">0</strong>건</span>
+                  <span style="color:var(--gray-500)">월납 합계 <strong id="lifeMonthlyTotal" style="color:var(--gray-900)">0원</strong></span>
+                  <span style="color:var(--primary);font-weight:600">CANP 예상 <strong id="lifeCanpTotal">0만원</strong></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11px;color:var(--gray-500);white-space:nowrap">월 목표 <span id="lifeGoalLabel">1,000만</span></span>
+                  <div style="flex:1;background:var(--gray-200);border-radius:4px;height:5px;overflow:hidden">
+                    <div id="lifeProgBar" style="width:0%;height:5px;border-radius:4px;background:var(--primary);transition:width .3s"></div>
+                  </div>
+                  <span id="lifeProgPct" style="font-size:11px;color:var(--primary);font-weight:600;white-space:nowrap">0%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 손해보험 입력 -->
+            <div class="card" style="margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--gray-100)">
+                <div style="width:10px;height:10px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
+                <span style="font-size:13px;font-weight:600;color:var(--success)">손해보험</span>
+                <span style="font-size:11px;color:var(--gray-500);margin-left:4px">실비/화재·펫 자동 구분</span>
+              </div>
+              <div style="overflow-x:auto">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:520px">
+                  <thead>
+                    <tr style="background:var(--gray-50)">
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);width:22px">#</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:68px">계약자</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:68px">피보험자</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:72px">보험사</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:68px">종류</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:76px">월납</th>
+                      <th style="padding:6px 6px;border:0.5px solid var(--gray-200);text-align:left;font-weight:500;color:var(--gray-500);min-width:56px">소개자</th>
+                      <th style="padding:6px 4px;border:0.5px solid var(--gray-200);width:20px"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="nonlifeTableBody"></tbody>
+                </table>
+              </div>
+              <button onclick="addNonlifeRow()" style="width:100%;padding:6px;border:0.5px dashed var(--gray-300);border-radius:var(--radius);background:transparent;color:var(--gray-500);font-size:12px;cursor:pointer;margin-top:6px;font-family:inherit">+ 행 추가</button>
+              <!-- 손보 소계 -->
+              <div id="nonlifeSummary" style="margin-top:10px;display:none">
+                <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:8px">보험사별 현황</div>
+                <div id="nonlifeCompanyCards"></div>
+                <div style="border-top:0.5px solid var(--gray-200);padding-top:8px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
+                  <div>
+                    <div style="font-size:10px;color:var(--gray-500)">실비 제외 합계</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--success)" id="nonlifeExSimbi">0원</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-size:10px;color:var(--gray-500)">실비 포함</div>
+                    <div style="font-size:13px;color:var(--gray-500)" id="nonlifeIncSimbi">0원</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 저장 버튼 -->
+            <button class="btn btn-primary btn-full" onclick="saveReport()" style="margin-bottom:8px">💾 오늘 활동 저장하기</button>
+          </div>
+
+          <!-- 계보도 탭 -->
+          <div id="inputTree" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--primary)"></span> 🌐 영업 계보도 (계약자 기준)</div>
+              <div id="treeClientView" style="overflow-x:auto;min-height:120px;padding:10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200)">
+                <div class="empty-state" style="padding:20px"><p style="font-size:12px">클로징 계약이 입력되면 계보도가 자동으로 표시됩니다</p></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 사업 -->
+          <div id="inputBiz" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--purple)"></span> 조직 계보도</div>
+              <div class="tree-container" id="bizTree"><div class="empty-state" style="padding:20px"><p style="font-size:12px">아래에서 대상자를 추가하면 계보도가 업데이트됩니다</p></div></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--purple)"></span> 사업 활동 입력</div>
+              <div id="bizTargetList"></div>
+              <button class="btn btn-outline btn-sm" onclick="addBizTarget()" style="margin-top:4px">+ 대상자 추가</button>
+            </div>
+          </div>
+
+          <!-- 근무태도 -->
+          <div id="inputAttitude" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--warning)"></span> 근무 체크리스트</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+                <label class="check-row" style="background:var(--gray-50);border-radius:var(--radius)"><input type="checkbox" id="att_late" /> ⚠️ 지각</label>
+                <label class="check-row" style="background:var(--gray-50);border-radius:var(--radius)"><input type="checkbox" id="att_noreport" /> 📵 미보고</label>
+                <label class="check-row" style="background:var(--gray-50);border-radius:var(--radius)"><input type="checkbox" id="att_share" /> 📢 공유 완료</label>
+                <label class="check-row" style="background:var(--gray-50);border-radius:var(--radius)"><input type="checkbox" id="att_edu" /> 📚 교육 실행</label>
+                <label class="check-row" style="background:var(--gray-50);border-radius:var(--radius)"><input type="checkbox" id="att_return" /> 🏢 회사 복귀</label>
+              </div>
+              <div class="section-divider"></div>
+              <div class="field-label" style="margin-bottom:10px">🤝 팀 기여 (체크할수록 별 추가)</div>
+              <div style="background:var(--gray-50);border-radius:var(--radius);padding:12px;margin-bottom:14px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                  <div class="star-row" id="stars-team" data-val="0">
+                    <span class="star" id="tstar-1">★</span><span class="star" id="tstar-2">★</span><span class="star" id="tstar-3">★</span><span class="star" id="tstar-4">★</span><span class="star" id="tstar-5">★</span>
+                  </div>
+                  <span style="font-size:12px;color:var(--gray-500)" id="teamStarLabel">0 / 5</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <label class="check-row" style="background:#fff;border-radius:var(--radius)" onclick="updateTeamStar()"><input type="checkbox" id="tc_1" /> 📚 오전 교육 듣고 실행하고 공유</label>
+                  <label class="check-row" style="background:#fff;border-radius:var(--radius)" onclick="updateTeamStar()"><input type="checkbox" id="tc_2" /> 💬 팀원 어려운 부분 피드백</label>
+                  <label class="check-row" style="background:#fff;border-radius:var(--radius)" onclick="updateTeamStar()"><input type="checkbox" id="tc_3" /> ✅ 피드백 내용 체킹</label>
+                  <label class="check-row" style="background:#fff;border-radius:var(--radius)" onclick="updateTeamStar()"><input type="checkbox" id="tc_4" /> 📰 영업·사업 도움 기사 공유</label>
+                  <label class="check-row" style="background:#fff;border-radius:var(--radius)" onclick="updateTeamStar()"><input type="checkbox" id="tc_5" /> 🌅 오전 출근 전우조 TA</label>
+                </div>
+              </div>
+              <div class="section-divider"></div>
+              <!-- 내일 할일 투두리스트 -->
+              <div style="margin-bottom:14px">
+                <div class="field-label" style="margin-bottom:8px">📝 내일 할 일 (투두리스트)</div>
+                <div id="todoList" style="margin-bottom:8px"></div>
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="todoInput" placeholder="내일 할 일 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter')addTodo()" />
+                  <button class="btn btn-outline btn-sm" onclick="addTodo()">추가</button>
+                </div>
+              </div>
+              <div class="section-divider"></div>
+              <!-- 하루 소감 -->
+              <div class="form-row col1" style="margin-bottom:14px">
+                <div><div class="field-label">오늘 하루 소감 / 특이사항</div><textarea id="att_note" placeholder="오늘 활동하면서 느낀 점이나 특이사항을 적어주세요"></textarea></div>
+              </div>
+              <!-- 저장 버튼 -->
+              <button class="btn btn-primary btn-full" onclick="saveReport()" style="margin-bottom:14px">💾 오늘 활동 저장하기</button>
+              <!-- 강조된 복사 영역 -->
+              <div style="background:linear-gradient(135deg,var(--primary-light),#f0f7ff);border:2px solid var(--primary);border-radius:var(--radius-lg);padding:14px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                  <div style="font-size:13px;font-weight:600;color:var(--primary)">📋 오늘 활동 요약 (팀 공유용)</div>
+                  <button style="background:var(--primary);color:#fff;border:none;border-radius:var(--radius);padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" onclick="copyAttitudeSummary()">📋 복사하기</button>
+                </div>
+                <div class="attitude-summary" id="attitudeSummary" style="background:#fff;border:1px solid var(--gray-200)">저장 후 요약이 표시됩니다</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--warning)"></span> 날짜별 근무 기록</div>
+              <div id="attitudeHistory"><div class="empty-state" style="padding:20px"><p>저장된 기록이 없습니다</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오늘 할 일 페이지 -->
+        <div class="page" id="page-todo">
+          <div class="card">
+            <div class="card-title"><span class="dot" style="background:var(--warning)"></span> 📝 내일 할 일 (투두리스트)</div>
+            <div id="todoPageList" style="margin-bottom:8px"></div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="todoPageInput" placeholder="내일 할 일 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter')addTodoFromPage()" />
+              <button class="btn btn-primary btn-sm" onclick="addTodoFromPage()">추가</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 영업 현황 -->
+        <div class="page" id="page-sales">
+          <div class="card"><div class="card-title"><span class="dot"></span> 생명 CANP 순위 (이번달)</div><div id="lifeRankTable"></div></div>
+          <div class="card"><div class="card-title"><span class="dot" style="background:var(--success)"></span> 손해보험 월납 순위 (이번달)</div><div id="nonlifeRankTable"></div></div>
+          <div class="card"><div class="card-title"><span class="dot" style="background:var(--warning)"></span> 개인별 목표 달성 현황</div><div id="goalProgress"></div></div>
+        </div>
+
+        <!-- 관리자 설정 -->
+        <div class="page" id="page-admin">
+          <div class="tab-bar" style="flex-wrap:wrap">
+            <div class="tab-btn active" onclick="switchAdminTab('products',this)">📋 상품·환산율</div>
+            <div class="tab-btn" onclick="switchAdminTab('goals',this)">🎯 목표설정</div>
+            <div class="tab-btn" onclick="switchAdminTab('convention',this)">🏆 컨벤션</div>
+            <div class="tab-btn" onclick="switchAdminTab('promo',this)">⭐ 프로모션</div>
+            <div class="tab-btn" onclick="switchAdminTab('members',this)">👥 팀원관리</div>
+            <div class="tab-btn" onclick="switchAdminTab('config',this)">🔧 시스템</div>
+          </div>
+          <!-- 목표 설정 -->
+          <div id="adminGoals" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> 월간 목표 설정</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:14px">기본값으로 설정해두고 언제든 변경 가능합니다</p>
+              <div class="form-row col3">
+                <div><div class="field-label">생명 CANP 목표 (만원)</div><input type="number" id="goal_canp" placeholder="1000" /></div>
+                <div><div class="field-label">생명 건수 목표 (건)</div><input type="number" id="goal_count" placeholder="20" /></div>
+                <div><div class="field-label">손보 월납 목표 (만원)</div><input type="number" id="goal_nonlife" placeholder="100" /></div>
+              </div>
+              <div class="form-row col2" style="margin-top:8px">
+                <div><div class="field-label">3W 기준 설정</div>
+                  <select id="goal_3w">
+                    <option value="3">3W (주 3건)</option>
+                    <option value="2">2W (주 2건)</option>
+                  </select>
+                </div>
+                <div><div class="field-label">컨벤션 목표 횟수</div>
+                  <select id="goal_convention">
+                    <option value="3">최소 3회</option>
+                    <option value="4">4회</option>
+                    <option value="5">5회</option>
+                    <option value="6">최대 6회</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="saveGoals()" style="margin-top:10px">저장</button>
+            </div>
+          </div>
+
+          <!-- 컨벤션 설정 -->
+          <div id="adminConvention" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> 컨벤션 시즌 현황</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:14px">2개월 단위 CANP 1,550만원 달성 시 1회 체크</p>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+                <div style="background:var(--primary-light);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--primary);margin-bottom:4px">시즌 1</div>
+                  <div style="font-size:12px;color:var(--gray-700)">1월 ~ 2월</div>
+                  <div style="font-size:10px;color:var(--gray-500);margin-top:2px">+ 윈터프로모션</div>
+                </div>
+                <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px">시즌 2</div>
+                  <div style="font-size:12px;color:var(--gray-700)">3월 ~ 4월</div>
+                </div>
+                <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px">시즌 3</div>
+                  <div style="font-size:12px;color:var(--gray-700)">5월 ~ 6월</div>
+                </div>
+                <div style="background:var(--warning-light);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--warning);margin-bottom:4px">시즌 4</div>
+                  <div style="font-size:12px;color:var(--gray-700)">7월 ~ 8월</div>
+                  <div style="font-size:10px;color:var(--gray-500);margin-top:2px">+ 썸머프로모션</div>
+                </div>
+                <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px">시즌 5</div>
+                  <div style="font-size:12px;color:var(--gray-700)">9월 ~ 10월</div>
+                </div>
+                <div style="background:var(--gray-50);border-radius:var(--radius);padding:10px;text-align:center">
+                  <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:4px">시즌 6</div>
+                  <div style="font-size:12px;color:var(--gray-700)">11월 ~ 12월</div>
+                </div>
+              </div>
+              <div id="conventionMemberTable"></div>
+            </div>
+          </div>
+
+          <!-- 프로모션 설정 -->
+          <div id="adminPromo" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--primary)"></span> ❄️ 윈터 프로모션 조건 설정 (1~2월)</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">A안 또는 B안 중 하나만 달성해도 프로모션 달성으로 인정됩니다</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">
+                <div style="border:1.5px solid var(--primary);border-radius:var(--radius);padding:12px;background:var(--primary-light)">
+                  <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:10px">A안 — 생명보험 실적</div>
+                  <div class="form-row col1">
+                    <div><div class="field-label">생명보험 월납 합산금액 (만원)</div><input type="number" id="winter_a_amount" placeholder="예: 1550" /></div>
+                  </div>
+                  <div class="form-row col2">
+                    <div><div class="field-label">건수 (건)</div><input type="number" id="winter_a_count" placeholder="예: 20" /></div>
+                    <div><div class="field-label">CANP 목표 (만원)</div><input type="number" id="winter_a_canp" placeholder="예: 1550" /></div>
+                  </div>
+                </div>
+                <div style="border:1.5px solid var(--success);border-radius:var(--radius);padding:12px;background:var(--success-light)">
+                  <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:10px">B안 — 손해보험 실적 추가</div>
+                  <div style="font-size:11px;color:var(--gray-500);margin-bottom:8px">A안 조건 + 손해보험 월납 추가 달성</div>
+                  <div class="form-row col1">
+                    <div><div class="field-label">손해보험 월납 합산금액 (만원)</div><input type="number" id="winter_b_nonlife" placeholder="예: 100" /></div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="savePromo('winter')">저장</button>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:#f0a500"></span> ☀️ 썸머 프로모션 조건 설정 (7~8월)</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">A안 또는 B안 중 하나만 달성해도 프로모션 달성으로 인정됩니다</p>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">
+                <div style="border:1.5px solid var(--primary);border-radius:var(--radius);padding:12px;background:var(--primary-light)">
+                  <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:10px">A안 — 생명보험 실적</div>
+                  <div class="form-row col1">
+                    <div><div class="field-label">생명보험 월납 합산금액 (만원)</div><input type="number" id="summer_a_amount" placeholder="예: 1550" /></div>
+                  </div>
+                  <div class="form-row col2">
+                    <div><div class="field-label">건수 (건)</div><input type="number" id="summer_a_count" placeholder="예: 20" /></div>
+                    <div><div class="field-label">CANP 목표 (만원)</div><input type="number" id="summer_a_canp" placeholder="예: 1550" /></div>
+                  </div>
+                </div>
+                <div style="border:1.5px solid var(--success);border-radius:var(--radius);padding:12px;background:var(--success-light)">
+                  <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:10px">B안 — 손해보험 실적 추가</div>
+                  <div style="font-size:11px;color:var(--gray-500);margin-bottom:8px">A안 조건 + 손해보험 월납 추가 달성</div>
+                  <div class="form-row col1">
+                    <div><div class="field-label">손해보험 월납 합산금액 (만원)</div><input type="number" id="summer_b_nonlife" placeholder="예: 100" /></div>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="savePromo('summer')">저장</button>
+            </div>
+          </div>
+
+          <div id="adminProducts">
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> 생명보험 상품 · 환산율 관리</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">CANP = 월납 × 환산율 &nbsp;|&nbsp; 환산율은 팀원에게 표시되지 않습니다</p>
+              <div style="display:flex;gap:8px;margin-bottom:12px;align-items:flex-end">
+                <div style="flex:1"><div class="field-label">상품명 (보험사+상품명 통합 입력)</div><input type="text" id="new_lifeProd" placeholder="예: 미래에셋 m-케어 20년갱신" /></div>
+                <div style="width:100px"><div class="field-label">환산율 (%)</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="new_lifeRate" placeholder="10" min="1" max="100" style="width:60px" /><span style="font-size:13px;color:var(--gray-500)">%</span></div></div>
+                <button class="btn btn-primary btn-sm" onclick="addLifeProduct()">추가</button>
+              </div>
+              <div id="lifeProductList"></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--success)"></span> 손해보험사 목록</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">기본 손해보험사 목록입니다. 손보 계약 입력 시 선택란에 표시됩니다.</p>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">삼성화재</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">메리츠화재</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">한화손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">현대해상</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">흥국화재</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">KB손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">DB손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">라이나손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">NH손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">하나손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">롯데손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">MG손해</div>
+                <div style="padding:8px 10px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);font-size:12px;font-weight:500;color:var(--gray-700)">AXA</div>
+              </div>
+            </div>
+          </div>
+          <div id="adminMembers" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> 새 팀원 추가</div>
+              <div class="form-row col3">
+                <div><div class="field-label">이름 <span class="req">*</span></div><input type="text" id="new_name" placeholder="김설계" /></div>
+                <div><div class="field-label">아이디 <span class="req">*</span></div><input type="text" id="new_uid" placeholder="kim_s" /></div>
+                <div><div class="field-label">비밀번호 <span class="req">*</span></div><input type="password" id="new_pw" placeholder="초기 비밀번호" /></div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="addMember()">추가</button>
+            </div>
+            <div class="card"><div class="card-title"><span class="dot"></span> 팀원 목록</div><div id="memberManageList"></div></div>
+            <div class="card">
+              <div class="card-title"><span class="dot" style="background:var(--purple)"></span> 조직도 구조 설정</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">각 팀원의 상위자를 지정하면 계보 탭에 조직도가 자동으로 표시됩니다</p>
+              <div id="orgChartEditor"></div>
+              <button class="btn btn-primary btn-sm" onclick="saveOrgChart()" style="margin-top:10px">조직도 저장</button>
+            </div>
+          </div>
+          <div id="adminConfig" style="display:none">
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> Supabase 연결</div>
+              <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px">연결 상태: <span id="dbStatus" style="font-weight:600">확인 중...</span></p>
+              <div class="form-row col1"><div><div class="field-label">Project URL</div><input type="text" id="cfg_url" placeholder="https://xxxx.supabase.co" /></div></div>
+              <div class="form-row col1"><div><div class="field-label">Anon Key</div><input type="text" id="cfg_key" placeholder="eyJ..." /></div></div>
+              <button class="btn btn-primary btn-sm" onclick="saveSupabaseConfig()">저장 후 재연결</button>
+            </div>
+            <div class="card">
+              <div class="card-title"><span class="dot"></span> 내 계정 정보 변경</div>
+              <div class="form-row col1" style="margin-bottom:8px">
+                <div><div class="field-label">아이디 변경</div><input type="text" id="admin_current_id" placeholder="새 아이디" /></div>
+              </div>
+              <div class="form-row col2">
+                <div><div class="field-label">새 비밀번호</div><input type="password" id="admin_pw1" /></div>
+                <div><div class="field-label">비밀번호 확인</div><input type="password" id="admin_pw2" /></div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="changeAdminPw()">변경</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="loading-overlay" id="loadingOverlay" style="display:none"><div class="spinner"></div></div>
+
+<script>
+// ===== CONFIG =====
+let SUPABASE_URL='https://zisasnnfszkvkyxzdxre.supabase.co';
+let SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inppc2Fzbm5mc3prdmt5eHpkeHJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxNDI3NzIsImV4cCI6MjA5NTcxODc3Mn0.2Up3N361CSM6RLmFM0umRmUo3FA8docFdipsJi7lJsA';
+let sb=null,demoMode=false,currentUser=null,consultCount=0;
+
+// ===== 상품 카테고리 =====
+const PRODUCT_CATEGORIES=['생명종합','손해종합','실비','암','운전자','화재','치아','재가','기타'];
+const CATEGORY_TYPE={'생명종합':'life','손해종합':'nonlife','실비':'nonlife','암':'nonlife','운전자':'nonlife','화재':'nonlife','치아':'nonlife','재가':'life','기타':'nonlife'};
+
+// ===== 데모 데이터 =====
+const DEMO_MEMBERS=[
+  {id:'dm-admin',username:'0',password_hash:'0',name:'양진환 부지점장',role:'admin'},
+  {id:'dm-1',username:'kim',password_hash:'1234',name:'김주형',role:'member'},
+  {id:'dm-2',username:'park',password_hash:'1234',name:'박설계',role:'member'},
+  {id:'dm-3',username:'lee',password_hash:'1234',name:'이보험',role:'member'},
+];
+const DEMO_RATES=[
+  {id:'r1',company_name:'삼성생명',product_name:'종신보험 플러스',rate:10},
+  {id:'r2',company_name:'한화생명',product_name:'변액종신',rate:10},
+  {id:'r3',company_name:'교보생명',product_name:'정기보험',rate:8},
+  {id:'r4',company_name:'삼성화재',product_name:'운전자보험A',rate:5},
+  {id:'r5',company_name:'DB손해보험',product_name:'실손보험',rate:4},
+];
+const DEMO_PRODUCTS={
+  life:[{id:'lp1',company:'삼성생명',product:'종신보험 플러스',type:'life'},{id:'lp2',company:'한화생명',product:'변액종신',type:'life'},{id:'lp3',company:'교보생명',product:'정기보험',type:'life'},{id:'lp4',company:'신한라이프',product:'CI보험',type:'life'}],
+  nonlife:[{id:"nl1",company:"삼성화재",product:"삼성화재",type:"nonlife"},{id:"nl2",company:"메리츠화재",product:"메리츠화재",type:"nonlife"},{id:"nl3",company:"한화손해",product:"한화손해",type:"nonlife"},{id:"nl4",company:"현대해상",product:"현대해상",type:"nonlife"},{id:"nl5",company:"흥국화재",product:"흥국화재",type:"nonlife"},{id:"nl6",company:"KB손해",product:"KB손해",type:"nonlife"},{id:"nl7",company:"DB손해",product:"DB손해",type:"nonlife"},{id:"nl8",company:"라이나손해",product:"라이나손해",type:"nonlife"},{id:"nl9",company:"NH손해",product:"NH손해",type:"nonlife"},{id:"nl10",company:"하나손해",product:"하나손해",type:"nonlife"},{id:"nl11",company:"롯데손해",product:"롯데손해",type:"nonlife"},{id:"nl12",company:"MG손해",product:"MG손해",type:"nonlife"},{id:"nl13",company:"AXA",product:"AXA",type:"nonlife"}]
+};
+const DEMO_CONSULTS=[
+  {id:'c1',member_id:'dm-1',member_name:'김주형',result:'클로징',insurance_type:'생명보험',nonlife_company:'삼성생명',product_name:'종신보험 플러스',monthly_premium:200000,report_date:'2025-06-05',policyholder:'홍길동',insured:'홍길동',referrer:''},
+  {id:'c2',member_id:'dm-1',member_name:'김주형',result:'클로징',insurance_type:'손해보험',nonlife_company:'삼성화재',product_name:'운전자보험A',monthly_premium:300000,report_date:'2025-06-10',policyholder:'이영희',insured:'이영희',referrer:'홍길동'},
+  {id:'c3',member_id:'dm-2',member_name:'박설계',result:'클로징',insurance_type:'생명보험',nonlife_company:'교보생명',product_name:'정기보험',monthly_premium:180000,report_date:'2025-06-07',policyholder:'김철수',insured:'김철수',referrer:''},
+  {id:'c4',member_id:'dm-3',member_name:'이보험',result:'클로징',insurance_type:'손해보험',nonlife_company:'DB손해보험',product_name:'실손보험',monthly_premium:120000,report_date:'2025-06-11',policyholder:'최민준',insured:'최민준',referrer:'김철수'},
+];
+
+function initSupabase(){
+  if(!SUPABASE_URL||!SUPABASE_ANON_KEY){demoMode=true;return;}
+  try{sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);demoMode=false;}
+  catch(e){demoMode=true;}
+}
+initSupabase();
+
+// ===== 유틸 =====
+function showLoading(v){document.getElementById('loadingOverlay').style.display=v?'flex':'none';}
+function toast(msg,type='info'){
+  const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},3000);
+}
+function getToday(){return new Date().toISOString().split('T')[0];}
+function getThisMonth(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function getWeekMonday(){
+  const d=new Date();const day=d.getDay();
+  const diff=d.getDate()-(day===0?6:day-1);
+  const mon=new Date(d);mon.setDate(diff);
+  return mon.toISOString().split('T')[0];
+}
+function initials(n){return n?n.slice(0,2):'??';}
+function fmtWon(n){if(!n&&n!==0)return '-';return Number(n).toLocaleString()+'원';}
+function fmtMan(n){if(!n&&n!==0)return '-';return Math.round(n/10000).toLocaleString()+'만원';}
+function fmtCurrency(val){
+  if(!val)return '';
+  const num=val.toString().replace(/[^0-9]/g,'');
+  if(!num)return '';
+  return Number(num).toLocaleString();
+}
+
+// ===== 로그인 =====
+let loginRole='member';
+function setLoginRole(role,el){loginRole=role;document.querySelectorAll('.role-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+async function doLogin(){
+  const id=document.getElementById('loginId').value.trim();
+  const pw=document.getElementById('loginPw').value.trim();
+  if(!id||!pw){document.getElementById('loginErr').textContent='아이디와 비밀번호를 입력하세요';return;}
+  // 아이디 저장
+  if(document.getElementById('saveIdChk')?.checked){
+    localStorage.setItem('saved_id',id);
+  } else {
+    localStorage.removeItem('saved_id');
+  }
+  showLoading(true);
+  let member=null;
+  if(demoMode){
+    member=DEMO_MEMBERS.find(m=>m.username===id&&m.password_hash===pw);
+    if(!member){showLoading(false);document.getElementById('loginErr').textContent='아이디 또는 비밀번호 오류';return;}
+  } else {
+    try{
+      const {data,error}=await sb.from('members').select('*').eq('username',id).eq('password_hash',pw).single();
+      if(error||!data){showLoading(false);document.getElementById('loginErr').textContent='아이디 또는 비밀번호 오류';return;}
+      member=data;
+    }catch(e){showLoading(false);document.getElementById('loginErr').textContent='서버 연결 오류';return;}
+  }
+  currentUser=member;showLoading(false);
+  document.getElementById('loginErr').textContent='';
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  setupUI();
+}
+function doLogout(){
+  currentUser=null;
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginPw').value='';
+  consultCount=0;
+}
+
+// ===== UI 설정 =====
+function setupUI(){
+  const isAdmin=currentUser.role==='admin';
+  document.getElementById('sideName').textContent=currentUser.name;
+  document.getElementById('sideRole').textContent=isAdmin?'관리자':'팀원';
+  document.getElementById('sideAvatar').textContent=initials(currentUser.name);
+  // 모바일 헤더 업데이트
+  const mobileAvatar=document.getElementById('mobileAvatar');
+  const mobileName=document.getElementById('mobileName');
+  const mobileUserInfo=document.getElementById('mobileUserInfo');
+  if(mobileAvatar)mobileAvatar.textContent=initials(currentUser.name);
+  if(mobileName)mobileName.textContent=currentUser.name;
+  if(mobileUserInfo&&window.innerWidth<=768)mobileUserInfo.style.display='flex';
+  document.querySelectorAll('.admin-menu').forEach(el=>el.style.display=isAdmin?'':'none');
+  document.getElementById('todayStr').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  if(!isAdmin){showPage('input',document.getElementById('nav-input'));}
+  else{showPage('dashboard',document.getElementById('nav-dashboard'));}
+  buildConsultBlocks();
+}
+
+// ===== 네비게이션 =====
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  const titles={dashboard:'팀 현황',input:'활동 입력',sales:'영업 현황',todo:'오늘 할 일',admin:'관리자 설정'};
+  document.getElementById('pageTitle').textContent=titles[name];
+  if(name==='dashboard')loadDashboard();
+  if(name==='sales')loadSales();
+  if(name==='admin')loadAdmin();
+  if(name==='input')loadTodayReport();
+  if(name==='todo')renderTodoPage();
+}
+function switchInputTab(tab,el){
+  document.querySelectorAll('#page-input .tab-btn').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('inputSales').style.display=tab==='sales'?'':'none';
+  document.getElementById('inputTree').style.display=tab==='tree'?'':'none';
+  document.getElementById('inputBiz').style.display=tab==='biz'?'':'none';
+  document.getElementById('inputAttitude').style.display=tab==='attitude'?'':'none';
+  if(tab==='biz')renderBizSection();
+  if(tab==='attitude')loadAttitudeHistory();
+  if(tab==='sales'){renderProspects();renderTodayTodos();}
+  if(tab==='tree')loadTreeTab();
+}
+function switchAdminTab(tab,el){
+  document.querySelectorAll('#page-admin .tab-btn').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['adminProducts','adminMembers','adminConfig','adminGoals','adminConvention','adminPromo'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  const panelId='admin'+tab.charAt(0).toUpperCase()+tab.slice(1);
+  const panel=document.getElementById(panelId);
+  if(panel)panel.style.display='';
+  if(tab==='members')loadMemberManage();
+  if(tab==='products')loadProductManage();
+  if(tab==='config')loadConfig();
+  if(tab==='goals')loadGoals();
+  if(tab==='convention')loadConventionAdmin();
+  if(tab==='promo')loadPromoAdmin();
+}
+
+// ===== 빠른 입력 =====
+let quickInputs=[];
+function addQuickInput(){
+  const name=document.getElementById('quickName')?.value.trim();
+  const result=document.getElementById('quickResult')?.value;
+  const memo=document.getElementById('quickMemo')?.value.trim();
+  if(!name){toast('이름을 입력하세요','error');return;}
+  quickInputs.push({name,result,memo,time:new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})});
+  document.getElementById('quickName').value='';
+  document.getElementById('quickMemo').value='';
+  document.getElementById('quickName').focus();
+  renderQuickInputs();
+}
+function renderQuickInputs(){
+  const el=document.getElementById('quickInputList');
+  if(!el)return;
+  if(quickInputs.length===0){el.innerHTML='';return;}
+  const colors={가망:'var(--warning-light)',상담:'var(--primary-light)',클로징:'var(--success-light)'};
+  const textColors={가망:'var(--warning)',상담:'var(--primary)',클로징:'var(--success)'};
+  el.innerHTML='';
+  quickInputs.forEach((q,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--radius);margin-bottom:5px;background:'+colors[q.result]+';border:1px solid rgba(0,0,0,.05)';
+    div.innerHTML=`
+      <span style="font-size:12px;font-weight:600;color:${textColors[q.result]};min-width:36px">${q.result}</span>
+      <span style="font-size:13px;font-weight:500;flex:1">${q.name}</span>
+      ${q.memo?`<span style="font-size:11px;color:var(--gray-500)">${q.memo}</span>`:''}
+      <span style="font-size:10px;color:var(--gray-400)">${q.time}</span>
+      <span onclick="quickInputs.splice(${i},1);renderQuickInputs()" style="cursor:pointer;color:var(--gray-300);font-size:14px">✕</span>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ===== 오늘 할 일 페이지 =====
+function addTodoFromPage(){
+  const input=document.getElementById('todoPageInput');
+  const text=input?.value.trim();
+  if(!text)return;
+  todos.push({text,status:0});
+  input.value='';
+  renderTodoPage();
+  renderTodos();
+}
+function renderTodoPage(){
+  const el=document.getElementById('todoPageList');
+  if(!el)return;
+  if(todos.length===0){
+    el.innerHTML='<div style="font-size:12px;color:var(--gray-500);padding:8px">아직 할 일이 없어요. 아래에서 추가해보세요!</div>';
+    return;
+  }
+  el.innerHTML='';
+  todos.forEach((t,i)=>{
+    const status=t.status||0;
+    const bgColors=['#fff','#fdf2e3','var(--gray-50)'];
+    const borderColors=['var(--gray-200)','#f0a500','var(--gray-300)'];
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:10px 12px;background:${bgColors[status]};border:1.5px solid ${borderColors[status]};border-radius:var(--radius);margin-bottom:6px;cursor:pointer;transition:all .15s`;
+    div.onclick=()=>{todos[i].status=(status+1)%3;renderTodoPage();renderTodos();};
+    const icons=['○','🔄','✅'];
+    const textStyle=status===2?'flex:1;font-size:13px;text-decoration:line-through;color:var(--gray-400)':'flex:1;font-size:13px';
+    div.innerHTML=`
+      <span style="font-size:16px;width:20px">${icons[status]}</span>
+      <span style="${textStyle}">${t.text}</span>
+      ${status===1?'<span style="font-size:11px;font-weight:600;color:var(--warning)">진행중</span>':''}
+      ${status===2?'<span style="font-size:11px;color:var(--gray-400)">완료</span>':''}
+      <span onclick="event.stopPropagation();todos.splice(${i},1);renderTodoPage();renderTodos()" style="color:var(--gray-300);font-size:14px;cursor:pointer">✕</span>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ===== 가망고객 리스트 =====
+let prospects=[];
+function addProspect(){
+  const input=document.getElementById('prospectInput');
+  const priority=document.getElementById('prospectPriority').value;
+  const name=input.value.trim();
+  if(!name)return;
+  prospects.push({name,priority,done:false});
+  input.value='';
+  renderProspects();
+}
+function renderProspects(){
+  const el=document.getElementById('prospectList');
+  if(!el)return;
+  if(prospects.length===0){el.innerHTML='<div style="font-size:12px;color:var(--gray-500);padding:8px">가망고객을 추가하세요</div>';return;}
+  el.innerHTML='';
+  prospects.forEach((p,i)=>{
+    const colors={high:'var(--danger)',mid:'var(--warning)',low:'var(--success)'};
+    const icons={high:'🔴',mid:'🟡',low:'🟢'};
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:7px 10px;background:${p.done?'var(--gray-50)':'#fff'};border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:5px;${p.done?'opacity:0.6':''}`;
+    div.innerHTML=`
+      <input type="checkbox" ${p.done?'checked':''} onchange="prospects[${i}].done=this.checked;renderProspects()" style="width:15px;height:15px;accent-color:var(--primary)" />
+      <span style="font-size:13px;font-weight:500;flex:1;${p.done?'text-decoration:line-through;color:var(--gray-500)':''}">${icons[p.priority]} ${p.name}</span>
+      <span style="font-size:10px;color:${colors[p.priority]};font-weight:600">${p.priority==='high'?'긴급':p.priority==='mid'?'보통':'여유'}</span>
+      <button onclick="prospects.splice(${i},1);renderProspects()" style="border:none;background:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:0">✕</button>
+    `;
+    el.appendChild(div);
+  });
+}
+function loadTreeTab(){
+  const el=document.getElementById('treeClientView');
+  if(!el)return;
+  if(demoMode){
+    renderSalesTree(DEMO_CONSULTS.filter(c=>c.result==='클로징'), el);
+    return;
+  }
+  const month=getThisMonth();
+  sb.from('consultations').select('*').eq('result','클로징').eq('member_id',currentUser.id).gte('report_date',month+'-01')
+    .then(({data})=>renderSalesTree(data||[], el))
+    .catch(()=>{});
+}
+function renderSalesTree(consults,el){
+  const clients={};
+  consults.forEach(c=>{
+    if(!c.policyholder)return;
+    if(!clients[c.policyholder])clients[c.policyholder]={referrer:c.referrer||'',products:[],count:0};
+    clients[c.policyholder].products.push(c.product_name||c.category||'');
+    clients[c.policyholder].count++;
+  });
+  if(Object.keys(clients).length===0){el.innerHTML='<div class="empty-state" style="padding:16px"><p style="font-size:12px">클로징 계약이 입력되면 계보도가 표시됩니다</p></div>';return;}
+
+  // 방사형: 나(중심) → 직접계약 → 소개고객
+  const roots=Object.entries(clients).filter(([n,v])=>!v.referrer||!clients[v.referrer]);
+  const html=`<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:center;padding:8px">
+    ${roots.map(([name,data])=>{
+      const children=Object.entries(clients).filter(([,v])=>v.referrer===name);
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div class="tree-box client" style="min-width:80px;text-align:center">
+          <div style="font-size:12px;font-weight:600">${name}</div>
+          <div style="font-size:10px;color:var(--gray-500);margin-top:2px">${data.products.slice(0,2).join('·')}</div>
+        </div>
+        ${children.length>0?`
+          <div style="width:2px;height:12px;background:var(--gray-300)"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
+            ${children.map(([cn,cd])=>`
+              <div class="tree-box client" style="min-width:70px;text-align:center;background:var(--success-light);border-color:var(--success);color:var(--success)">
+                <div style="font-size:11px;font-weight:600">${cn}</div>
+                <div style="font-size:10px;margin-top:1px">소개↑${name}</div>
+              </div>`).join('')}
+          </div>`:''
+        }
+      </div>`;
+    }).join('')}
+  </div>`;
+  el.innerHTML=html;
+}
+
+// ===== 투두리스트 =====
+let todos=[];
+function addTodo(){
+  const input=document.getElementById('todoInput');
+  const text=input.value.trim();
+  if(!text)return;
+  todos.push({text,done:false});
+  input.value='';
+  renderTodos();
+}
+function renderTodos(){
+  const el=document.getElementById('todoList');
+  if(!el)return;
+  if(todos.length===0){el.innerHTML='<div style="font-size:12px;color:var(--gray-500);padding:6px">내일 할 일을 추가하세요</div>';return;}
+  el.innerHTML='';
+  todos.forEach((t,i)=>{
+    const status=t.status||0;
+    const bgColors=['#fff','#fdf2e3','var(--gray-50)'];
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:7px 10px;background:${bgColors[status]};border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:5px`;
+    const textStyle=status===2?'flex:1;font-size:13px;text-decoration:line-through;color:var(--gray-400)':'flex:1;font-size:13px';
+    const statusLabel=status===1?'<span style="font-size:10px;color:var(--warning);font-weight:600">진행중</span>':status===2?'<span style="font-size:10px;color:var(--gray-400);font-weight:600">완료</span>':'';
+    div.innerHTML=`
+      <span style="${textStyle}" onclick="touchTodo(${i})">${t.text}</span>
+      ${statusLabel}
+      <button onclick="todos.splice(${i},1);renderTodos();renderTodayTodos()" style="border:none;background:none;color:var(--gray-300);cursor:pointer;font-size:14px;padding:0">✕</button>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ===== 상담 블록 =====
+let productCache={life:[],nonlife:[]};
+function buildConsultBlocks(){
+  // 새 엑셀 스타일 테이블 초기화
+  renderLifeTable();
+  renderNonlifeTable();
+}
+
+// ===== 생명보험 테이블 =====
+let lifeRows=[];
+let nonlifeRows=[];
+
+function getLifeProducts(){
+  if(demoMode)return productCache.life||DEMO_PRODUCTS.life;
+  return productCache.life||[];
+}
+
+function addLifeRow(){
+  lifeRows.push({name:'',result:'클로징',product:'',monthly:'',referrer:''});
+  renderLifeTable();
+  updateLifeSummary();
+}
+
+function removeLifeRow(i){
+  lifeRows.splice(i,1);
+  renderLifeTable();
+  updateLifeSummary();
+}
+
+function renderLifeTable(){
+  const tbody=document.getElementById('lifeTableBody');
+  if(!tbody)return;
+  const prods=getLifeProducts();
+  const prodOpts=prods.map(p=>`<option value="${p.company}__${p.product}">${p.company} ${p.product}</option>`).join('');
+  tbody.innerHTML='';
+  if(lifeRows.length===0){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td colspan="8" style="padding:12px;text-align:center;color:var(--gray-400);font-size:12px;border:0.5px solid var(--gray-200)">+ 행 추가 버튼으로 계약 기록을 추가하세요</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  lifeRows.forEach((row,i)=>{
+    const isSimbi=row.lifeType==='실비';
+    const tr=document.createElement('tr');
+    tr.style.background=isSimbi?'var(--gray-50)':'#fff';
+    tr.innerHTML=`
+      <td style="padding:3px 4px;border:0.5px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:10px">${i+1}</td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.name||''}" placeholder="계약자" onchange="lifeRows[${i}].name=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.insured||''}" placeholder="=계약자" onchange="lifeRows[${i}].insured=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <select onchange="lifeRows[${i}].lifeType=this.value;renderLifeTable();updateLifeSummary()" style="width:100%;border:none;background:transparent;font-size:11px;padding:2px;font-family:inherit;outline:none;color:var(--gray-900)">
+          <option value="장기" ${(row.lifeType||'장기')==='장기'?'selected':''}>장기</option>
+          <option value="실비" ${row.lifeType==='실비'?'selected':''}>실비</option>
+        </select>
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <select onchange="lifeRows[${i}].product=this.value;updateLifeSummary()" style="width:100%;border:none;background:transparent;font-size:11px;padding:2px;font-family:inherit;outline:none;color:var(--gray-900)">
+          <option value="">-- 상품 선택 --</option>
+          ${prodOpts}
+        </select>
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.monthly||''}" placeholder="0" oninput="lifeRows[${i}].monthly=this.value.replace(/[^0-9]/g,'');this.value=Number(this.value.replace(/[^0-9]/g,'')).toLocaleString();updateLifeSummary()" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.referrer||''}" placeholder="—" onchange="lifeRows[${i}].referrer=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 4px;border:0.5px solid var(--gray-200);text-align:center">
+        <span onclick="removeLifeRow(${i})" style="cursor:pointer;color:var(--gray-300);font-size:14px;line-height:1">✕</span>
+      </td>
+    `;
+    if(row.product){const sel=tr.querySelectorAll('select')[1];if(sel)[...sel.options].forEach(o=>{if(o.value===row.product)o.selected=true;});}
+    tbody.appendChild(tr);
+  });
+}
+function updateLifeSummary(){
+  const settings=getSettings();
+  const goalCanp=(settings.goal_canp||1000)*10000;
+  const rateMap={}; // will use demo rates
+  if(demoMode)DEMO_RATES.forEach(r=>rateMap[r.company_name+'__'+r.product_name]=r.rate||10);
+
+  const closings=lifeRows.filter(r=>r.result==='클로징'&&parseInt(r.monthly||0)>=10000);
+  let totalMonthly=0,totalCanp=0;
+  closings.forEach(r=>{
+    const m=parseInt(r.monthly||0);
+    totalMonthly+=m;
+    const rate=rateMap[r.product]||10;
+    totalCanp+=m*rate;
+  });
+  const canpMan=Math.round(totalCanp/10000);
+  const pct=Math.min(100,Math.round((totalCanp/goalCanp)*100));
+
+  const summaryEl=document.getElementById('lifeSummary');
+  if(!summaryEl)return;
+  if(closings.length===0&&lifeRows.length===0){summaryEl.style.display='none';return;}
+  summaryEl.style.display='block';
+
+  document.getElementById('lifeClosingCount').textContent=closings.length;
+  document.getElementById('lifeMonthlyTotal').textContent=totalMonthly.toLocaleString()+'원';
+  document.getElementById('lifeCanpTotal').textContent=canpMan.toLocaleString()+'만원';
+  document.getElementById('lifeGoalLabel').textContent=Math.round(goalCanp/10000).toLocaleString()+'만';
+  document.getElementById('lifeProgBar').style.width=pct+'%';
+  document.getElementById('lifeProgPct').textContent=pct+'%';
+}
+
+// ===== 손해보험 테이블 =====
+function addNonlifeRow(){
+  nonlifeRows.push({name:'',result:'클로징',company:'',type:'일반',monthly:'',referrer:''});
+  renderNonlifeTable();
+  updateNonlifeSummary();
+}
+
+function removeNonlifeRow(i){
+  nonlifeRows.splice(i,1);
+  renderNonlifeTable();
+  updateNonlifeSummary();
+}
+
+function renderNonlifeTable(){
+  const tbody=document.getElementById('nonlifeTableBody');
+  if(!tbody)return;
+  const NL_COS=["삼성화재","메리츠화재","한화손해","현대해상","흥국화재","KB손해","DB손해","라이나손해","NH손해","하나손해","롯데손해","MG손해","AXA"];
+  const compOpts=NL_COS.map(c=>`<option value="${c}">${c}</option>`).join('');
+  tbody.innerHTML='';
+  if(nonlifeRows.length===0){
+    const tr=document.createElement('tr');
+    tr.innerHTML='<td colspan="8" style="padding:12px;text-align:center;color:var(--gray-400);font-size:12px;border:0.5px solid var(--gray-200)">+ 행 추가 버튼으로 계약 기록을 추가하세요</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  nonlifeRows.forEach((row,i)=>{
+    const isAuto=row.type==='자동차';
+    const isSimbi=row.type==='실비';
+    const tr=document.createElement('tr');
+    tr.style.background=isAuto||isSimbi?'var(--gray-50)':'#fff';
+    tr.innerHTML=`
+      <td style="padding:3px 4px;border:0.5px solid var(--gray-200);text-align:center;color:var(--gray-400);font-size:10px">${i+1}</td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.name||''}" placeholder="계약자" onchange="nonlifeRows[${i}].name=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.insured||''}" placeholder="=계약자" onchange="nonlifeRows[${i}].insured=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <select onchange="nonlifeRows[${i}].company=this.value;updateNonlifeSummary()" style="width:100%;border:none;background:transparent;font-size:11px;padding:2px;font-family:inherit;outline:none;color:var(--gray-900)">
+          <option value="">-- 선택 --</option>
+          ${compOpts}
+        </select>
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <select onchange="nonlifeRows[${i}].type=this.value;renderNonlifeTable();updateNonlifeSummary()" style="width:100%;border:none;background:transparent;font-size:11px;padding:2px;font-family:inherit;outline:none;color:var(--gray-900)">
+          <option value="장기" ${(row.type||'장기')==='장기'?'selected':''}>장기</option>
+          <option value="실비" ${row.type==='실비'?'selected':''}>실비</option>
+          <option value="화재·펫" ${row.type==='화재·펫'?'selected':''}>화재·펫</option>
+          <option value="자동차" ${row.type==='자동차'?'selected':''}>자동차</option>
+        </select>
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200);opacity:${isAuto?0.3:1}">
+        ${isAuto
+          ?'<span style="font-size:11px;color:var(--gray-400);padding:2px 4px">건수만</span>'
+          :`<input type="text" value="${row.monthly||''}" placeholder="0" oninput="nonlifeRows[${i}].monthly=this.value.replace(/[^0-9]/g,'');this.value=Number(this.value.replace(/[^0-9]/g,'')).toLocaleString();updateNonlifeSummary()" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />`
+        }
+      </td>
+      <td style="padding:2px 3px;border:0.5px solid var(--gray-200)">
+        <input type="text" value="${row.referrer||''}" placeholder="—" onchange="nonlifeRows[${i}].referrer=this.value" style="width:100%;border:none;background:transparent;font-size:12px;padding:3px;font-family:inherit;outline:none;color:var(--gray-900)" />
+      </td>
+      <td style="padding:2px 4px;border:0.5px solid var(--gray-200);text-align:center">
+        <span onclick="removeNonlifeRow(${i})" style="cursor:pointer;color:var(--gray-300);font-size:14px;line-height:1">✕</span>
+      </td>
+    `;
+    if(row.company){const sel=tr.querySelector('select');if(sel)[...sel.options].forEach(o=>{if(o.value===row.company)o.selected=true;});}
+    tbody.appendChild(tr);
+  });
+}
+function updateNonlifeSummary(){
+  const closings=nonlifeRows.filter(r=>r.result==='클로징'&&parseInt(r.monthly||0)>=10000);
+  if(closings.length===0&&nonlifeRows.length===0){
+    const el=document.getElementById('nonlifeSummary');
+    if(el)el.style.display='none';
+    return;
+  }
+  const el=document.getElementById('nonlifeSummary');
+  if(el)el.style.display='block';
+
+  // 보험사별 집계
+  const companyMap={};
+  let totalExSimbi=0,totalInc=0;
+  closings.forEach(r=>{
+    const m=parseInt(r.monthly||0);
+    const co=r.company||'미선택';
+    if(!companyMap[co])companyMap[co]={total:0,type:r.type,isAuto:r.type==='자동차',count:0};
+    companyMap[co].count=(companyMap[co].count||0)+1;
+    if(r.type==='자동차'){companyMap[co].isAuto=true;return;} // 자동차는 건수만
+    companyMap[co].total+=m;
+    companyMap[co].type=r.type;
+    totalInc+=m;
+    if(r.type!=='실비')totalExSimbi+=m;
+  });
+
+  // 보험사별 카드 렌더
+  const cardsEl=document.getElementById('nonlifeCompanyCards');
+  if(!cardsEl)return;
+  const settings=getSettings();
+  const goalNonlife=(settings.goal_nonlife||100)*10000;
+
+  cardsEl.innerHTML='';
+  Object.entries(companyMap).forEach(([co,data])=>{
+    const m=data.total;
+    const isSimbi=data.type==='실비';
+    const isFire=data.type==='화재·펫';
+    // 다음 10만 단위 목표
+    const nextTarget=isSimbi?0:Math.ceil((m+1)/100000)*100000;
+    const remaining=isSimbi?0:nextTarget-m;
+    const pct=isSimbi?0:Math.min(100,Math.round((m/goalNonlife)*100));
+    const barColor=m>=goalNonlife?'var(--success)':m>=700000?'#378add':m>=400000?'#f0a500':'var(--success)';
+
+    const card=document.createElement('div');
+    card.style.cssText='border:0.5px solid var(--gray-200);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;background:#fff';
+
+    if(data.isAuto){
+      card.style.background='var(--gray-50)';
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;font-weight:500">${co}</span>
+          <span style="font-size:10px;padding:2px 7px;background:var(--gray-100);border-radius:10px;color:var(--gray-600);border:0.5px solid var(--gray-200)">자동차보험</span>
+        </div>
+        <div style="font-size:12px;color:var(--gray-600);margin-top:4px">${data.count}건 — 월납 미포함</div>`;
+    } else if(isSimbi){
+      card.style.opacity='0.55';
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;font-weight:500">${co}</span>
+          <span style="font-size:10px;padding:2px 7px;background:var(--gray-100);border-radius:10px;color:var(--gray-500);border:0.5px solid var(--gray-200)">실비 제외</span>
+        </div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:4px">${m.toLocaleString()}원 — 합산 미포함</div>`;
+    } else {
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:12px;font-weight:500">${co}</span>
+          <div style="display:flex;gap:4px;align-items:center">
+            ${isFire?'<span style="font-size:10px;padding:1px 6px;background:var(--warning-light);border-radius:10px;color:var(--warning);border:0.5px solid rgba(160,92,10,.2)">구간시책 제외</span>':''}
+            ${m>=goalNonlife?'<span style="font-size:10px;padding:1px 8px;background:var(--success-light);border-radius:10px;color:var(--success);font-weight:500;border:0.5px solid rgba(26,122,74,.2)">100만 달성!</span>':''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin:5px 0">
+          <span style="font-size:17px;font-weight:600;color:var(--gray-900)">${m.toLocaleString()}</span>
+          ${m<goalNonlife?`<span style="font-size:13px;color:var(--gray-400)">→</span>
+          <span style="font-size:17px;font-weight:600;color:var(--success)">${nextTarget.toLocaleString()}원</span>`:'<span style="font-size:13px;color:var(--gray-500)">원</span>'}
+        </div>
+        <div style="background:var(--gray-200);border-radius:4px;height:6px;overflow:hidden">
+          <div style="width:${Math.min(100,Math.round((m/nextTarget)*100))}%;height:6px;border-radius:4px;background:${barColor}"></div>
+        </div>
+        ${m<goalNonlife?`<div style="margin-top:6px;padding:5px 10px;text-align:center;border-radius:var(--radius);background:${remaining<=20000?'var(--danger-light)':'var(--warning-light)'};border:0.5px solid ${remaining<=20000?'rgba(160,26,26,.2)':'rgba(160,92,10,.2)'}">
+          <span style="font-size:11px;color:${remaining<=20000?'var(--danger)':'var(--warning)'}">${nextTarget/10000}만 달성까지 </span>
+          <span style="font-size:15px;font-weight:600;color:${remaining<=20000?'var(--danger)':'var(--warning)'}">${remaining.toLocaleString()}원</span>
+          <span style="font-size:11px;color:${remaining<=20000?'var(--danger)':'var(--warning)'}"> 더 필요</span>
+        </div>`:''}
+      `;
+    }
+    cardsEl.appendChild(card);
+  });
+
+  const exEl=document.getElementById('nonlifeExSimbi');
+  const incEl=document.getElementById('nonlifeIncSimbi');
+  if(exEl)exEl.textContent=totalExSimbi.toLocaleString()+'원';
+  if(incEl)incEl.textContent=totalInc.toLocaleString()+'원';
+}
+
+async function getProducts(){
+  if(demoMode)return DEMO_PRODUCTS;
+  try{
+    const {data}=await sb.from('products').select('*').order('company');
+    return{life:(data||[]).filter(p=>p.type==='life'),nonlife:(data||[]).filter(p=>p.type==='nonlife')};
+  }catch(e){return DEMO_PRODUCTS;}
+}
+
+async function addConsultBlock(){
+  if(consultCount>=3){toast('하루 최대 3건','error');return;}
+  consultCount++;const n=consultCount;
+  const prods=await getProducts();productCache=prods;
+
+  const div=document.createElement('div');
+  div.className='consult-block';div.id=`consult-${n}`;
+  div.innerHTML=`
+    <div class="consult-block-head" onclick="toggleConsult(${n})" style="cursor:pointer">
+      <span class="consult-num">상담 ${n}번째</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="consult-collapsed" id="consult-collapsed-${n}" style="display:none;font-size:11px;color:var(--gray-500)">접힘 (클릭해서 펼치기)</span>
+        ${n>1?`<button class="consult-del" onclick="event.stopPropagation();removeConsult(${n})">삭제</button>`:''}
+        <span style="font-size:16px;color:var(--gray-300)" id="consult-arrow-${n}">▼</span>
+      </div>
+    </div>
+    <div class="consult-block-content" id="consult-content-${n}">
+    <!-- 계약자/피보험자 -->
+    <div class="form-row col2">
+      <div><div class="field-label">계약자 성함 <span class="req">*</span></div><input type="text" id="c${n}_policyholder" placeholder="홍길동" /></div>
+      <div><div class="field-label">피보험자 성함</div><input type="text" id="c${n}_insured" placeholder="홍길동 (다르면 입력)" /></div>
+    </div>
+    <!-- 관계 단계 -->
+    <div class="form-row col1" style="margin-bottom:10px">
+      <div><div class="field-label">관계 단계</div>
+        <div class="funnel-wrap" id="c${n}_funnel" data-val="지인">
+          <div class="funnel-btn active" onclick="setFunnel(${n},'지인',this)">지인</div>
+          <span class="funnel-arrow">→</span>
+          <div class="funnel-btn" onclick="setFunnel(${n},'상담',this)">상담</div>
+          <span class="funnel-arrow">→</span>
+          <div class="funnel-btn" onclick="setFunnel(${n},'고객',this)">고객</div>
+          <span class="funnel-arrow">→</span>
+          <div class="funnel-btn" onclick="setFunnel(${n},'소개',this)">소개</div>
+          <span class="funnel-arrow">→</span>
+          <div class="funnel-btn" onclick="setFunnel(${n},'키맨',this)">키맨</div>
+        </div>
+      </div>
+    </div>
+    <!-- 상담 결과 -->
+    <div class="form-row col1" style="margin-bottom:10px">
+      <div><div class="field-label">상담 결과</div>
+        <div class="result-tabs" id="c${n}_result" data-val="보류">
+          <div class="res-btn" onclick="setResult(${n},'클로징',this)">✅ 클로징</div>
+          <div class="res-btn active-hold" onclick="setResult(${n},'거절',this)">❌ 거절</div>
+          <div class="res-btn" onclick="setResult(${n},'보류',this)">⏸ 보류</div>
+        </div>
+      </div>
+    </div>
+    <!-- 클로징 정보 -->
+    <div id="c${n}_closingBox" style="display:none">
+      <div class="closing-box">
+        <div class="closing-box-title">📋 클로징 정보</div>
+        <!-- 상품 카테고리 -->
+        <div style="margin-bottom:10px">
+          <div class="field-label" style="margin-bottom:6px">상품 종류 (복수 선택 가능)</div>
+          <div class="cat-grid" id="c${n}_catGrid"></div>
+        </div>
+        <!-- 선택된 카테고리별 상품 입력 -->
+        <div id="c${n}_productRows"></div>
+        <!-- 소개자 -->
+        <div class="form-row col1" style="margin-top:8px">
+          <div><div class="field-label">소개자 (소개받은 경우)</div>
+            <input type="text" id="c${n}_referrer" placeholder="소개인 성함 또는 사업장명" />
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:4px">🔒 환산율은 관리자만 열람 가능</div>
+      </div>
+    </div>
+    <!-- 체크리스트 -->
+    <div style="margin-top:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="field-label">상담 체크리스트</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div id="c${n}_starRow" class="star-row" data-val="0">
+            <span class="cstar star" style="font-size:16px;color:var(--gray-200)" id="cstar${n}_1">★</span>
+            <span class="cstar star" style="font-size:16px;color:var(--gray-200)" id="cstar${n}_2">★</span>
+            <span class="cstar star" style="font-size:16px;color:var(--gray-200)" id="cstar${n}_3">★</span>
+            <span class="cstar star" style="font-size:16px;color:var(--gray-200)" id="cstar${n}_4">★</span>
+            <span class="cstar star" style="font-size:16px;color:var(--gray-200)" id="cstar${n}_5">★</span>
+          </div>
+          <span style="font-size:11px;color:var(--gray-500)" id="c${n}_starLabel">0/5</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <label class="check-row" onclick="updateConsultStar(${n})"><input type="checkbox" id="c${n}_needsChk" /> 🎯 니즈 파악</label>
+        <label class="check-row" onclick="updateConsultStar(${n})"><input type="checkbox" id="c${n}_selfIntro" /> 👋 자기소개</label>
+        <label class="check-row" onclick="updateConsultStar(${n})"><input type="checkbox" id="c${n}_call" /> 📞 콜센터 진행</label>
+        <label class="check-row" onclick="updateConsultStar(${n})"><input type="checkbox" id="c${n}_introReq" /> 🤝 소개 요청</label>
+        <label class="check-row" onclick="updateConsultStar(${n})"><input type="checkbox" id="c${n}_saving" /> 💰 저축 제안</label>
+      </div>
+      <div style="margin-top:8px">
+        <div class="field-label" style="margin-bottom:6px">활용 RP</div>
+        <div class="rp-grid" id="c${n}_rpGrid">
+          <div class="rp-chip" onclick="toggleRP(this)">암AB</div>
+          <div class="rp-chip" onclick="toggleRP(this)">전산</div>
+          <div class="rp-chip" onclick="toggleRP(this)">생손차이</div>
+          <div class="rp-chip" onclick="toggleRP(this)">저축</div>
+          <div class="rp-chip" onclick="toggleRP(this)">운전자ABC</div>
+          <div class="rp-chip" onclick="toggleRP(this)">치아</div>
+          <div class="rp-chip" onclick="toggleRP(this)">기타</div>
+        </div>
+      </div>
+    </div>
+    <!-- 메모 & 알람 -->
+    <div class="form-row col1" style="margin-top:10px">
+      <div><div class="field-label">니즈 / 귀가 열린 부분</div><textarea id="c${n}_needsNote" placeholder="어떤 니즈가 있었나요? 무엇에 관심을 보였나요?"></textarea></div>
+    </div>
+    <div class="form-row col1" style="margin-top:6px">
+      <div><div class="field-label">병력 / 특이사항 / 기타 메모</div><textarea id="c${n}_memo" placeholder="고객 병력, 특이사항, 기타 메모"></textarea></div>
+    </div>
+    <!-- 캘린더 알람 -->
+    <div style="margin-top:8px;background:var(--warning-light);border:1px solid rgba(160,92,10,.2);border-radius:var(--radius);padding:10px">
+      <div class="field-label" style="margin-bottom:8px;color:var(--warning)">🔔 캘린더 알람 설정 (삼성 캘린더)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><div class="field-label">날짜</div><input type="date" id="c${n}_alarmDate" /></div>
+        <div><div class="field-label">시간</div><input type="time" id="c${n}_alarmTime" /></div>
+      </div>
+      <div style="margin-bottom:8px"><div class="field-label">알람 메모</div><input type="text" id="c${n}_alarmMemo" placeholder="예: 홍길동 고객 보험 상담 follow-up" /></div>
+      <button class="btn btn-sm" style="background:var(--warning);color:#fff;border:none;width:100%" onclick="addToCalendar(${n})">📅 삼성 캘린더에 추가</button>
+    </div>
+    </div>
+  `;
+  document.getElementById('consultList').appendChild(div);
+
+  // 카테고리 칩 생성
+  const catGrid=document.getElementById(`c${n}_catGrid`);
+  PRODUCT_CATEGORIES.forEach(cat=>{
+    const chip=document.createElement('div');
+    chip.className='cat-chip';
+    chip.textContent=cat;
+    chip.onclick=()=>toggleCategory(n,cat,chip);
+    catGrid.appendChild(chip);
+  });
+
+  // 이전 블록 자동 축소
+  for(let i=1;i<n;i++){
+    const c=document.getElementById('consult-content-'+i);
+    const a=document.getElementById('consult-arrow-'+i);
+    if(c){c.style.display='none';}
+    if(a){a.textContent='▶';}
+  }
+  if(consultCount>=3)document.getElementById('addConsultBtn').style.display='none';
+}
+
+function toggleCategory(n,cat,chip){
+  chip.classList.toggle('on');
+  renderProductRows(n);
+}
+
+function renderProductRows(n){
+  const container=document.getElementById(`c${n}_productRows`);
+  const selectedCats=[...document.querySelectorAll(`#c${n}_catGrid .cat-chip.on`)].map(c=>c.textContent);
+  container.innerHTML='';
+  if(selectedCats.length===0)return;
+
+  selectedCats.forEach(cat=>{
+    const insType=CATEGORY_TYPE[cat]||'nonlife';
+    const prods=insType==='life'?productCache.life:productCache.nonlife;
+    const companies=[...new Set(prods.map(p=>p.company))];
+    const safeId=cat.replace(/[^a-zA-Z0-9가-힣]/g,'');
+    const isSimbi=(cat==='실비'||cat==='운전자'||cat==='화재'); // 이 카테고리는 상품명/납입기간 없음
+
+    const row=document.createElement('div');
+    row.style.cssText='border:1px solid var(--gray-200);border-radius:var(--radius);padding:10px;margin-bottom:8px;background:#fff';
+    row.innerHTML=`
+      <div style="font-size:12px;font-weight:600;color:${insType==='life'?'var(--primary)':'var(--success)'};margin-bottom:8px">
+        ${insType==='life'?'🔵':'🟢'} ${cat} (${insType==='life'?'생명보험':'손해보험'})
+      </div>
+      <div class="form-row ${isSimbi?'col2':'col2'}">
+        <div><div class="field-label">보험사</div>
+          <select id="c${n}_comp_${safeId}" onchange="filterProductsByCat(${n},'${safeId}','${insType}')">
+            <option value="">-- 선택 --</option>
+            ${companies.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+        ${isSimbi?`<div><div class="field-label">월납 (원)</div><input type="text" id="c${n}_monthly_${safeId}" placeholder="0" oninput="formatCurrencyInput(this)" /></div>`:`
+        <div><div class="field-label">상품명</div>
+          <select id="c${n}_prod_${safeId}">
+            <option value="">-- 보험사 먼저 선택 --</option>
+          </select>
+        </div>`}
+      </div>
+      ${isSimbi?'':`
+      <div class="form-row col2">
+        <div><div class="field-label">월납 (원)</div>
+          <input type="text" id="c${n}_monthly_${safeId}" placeholder="0" oninput="formatCurrencyInput(this)" />
+        </div>
+        <div><div class="field-label">납입기간</div>
+          <select id="c${n}_period_${safeId}">
+            <option>20년갱신</option><option>10년갱신</option><option>30년갱신</option>
+            <option>10년납</option><option>20년납</option><option>30년납</option><option>전기납</option>
+          </select>
+        </div>
+      </div>`}
+    `;
+    container.appendChild(row);
+  });
+}
+
+function formatCurrencyInput(el){
+  const raw=el.value.replace(/[^0-9]/g,'');
+  if(raw)el.value=Number(raw).toLocaleString();
+  else el.value='';
+}
+
+function filterProductsByCat(n,safeId,insType){
+  const company=document.getElementById(`c${n}_comp_${safeId}`).value;
+  const prodSel=document.getElementById(`c${n}_prod_${safeId}`);
+  const prods=(insType==='life'?productCache.life:productCache.nonlife).filter(p=>p.company===company);
+  prodSel.innerHTML=`<option value="">-- 선택 --</option>`+prods.map(p=>`<option value="${p.product}">${p.product}</option>`).join('');
+}
+
+function removeConsult(n){const el=document.getElementById(`consult-${n}`);if(el)el.remove();consultCount--;document.getElementById('addConsultBtn').style.display='';}
+
+function toggleConsult(n){
+  const content=document.getElementById(`consult-content-${n}`);
+  const arrow=document.getElementById(`consult-arrow-${n}`);
+  if(!content)return;
+  const isOpen=content.style.display!=='none';
+  content.style.display=isOpen?'none':'block';
+  if(arrow)arrow.textContent=isOpen?'▶':'▼';
+}
+
+function updateConsultStar(n){
+  setTimeout(()=>{
+    let cnt=0;
+    const checks=['needsChk','selfIntro','call','introReq','saving'];
+    checks.forEach(id=>{if(document.getElementById('c'+n+'_'+id)?.checked)cnt++;});
+    const wrap=document.getElementById('c'+n+'_starRow');
+    if(!wrap)return;
+    wrap.dataset.val=cnt;
+    const stars=wrap.querySelectorAll('.cstar');
+    stars.forEach((s,i)=>{s.style.color=i<cnt?'#f0a500':'var(--gray-200)';});
+    const lbl=document.getElementById('c'+n+'_starLabel');
+    if(lbl)lbl.textContent=cnt+'/5';
+  },50);
+}
+function setFunnel(n,val,el){document.getElementById(`c${n}_funnel`).dataset.val=val;document.querySelectorAll(`#c${n}_funnel .funnel-btn`).forEach(b=>b.classList.remove('active'));el.classList.add('active');}
+function setResult(n,val,el){
+  const wrap=document.getElementById(`c${n}_result`);wrap.dataset.val=val;
+  wrap.querySelectorAll('.res-btn').forEach(b=>{b.className='res-btn';});
+  if(val==='클로징')el.className='res-btn active-close';
+  else if(val==='거절')el.className='res-btn active-reject';
+  else el.className='res-btn active-hold';
+  document.getElementById(`c${n}_closingBox`).style.display=val==='클로징'?'':'none';
+}
+function toggleRP(el){el.classList.toggle('on');}
+function getRPSelected(n){return [...document.querySelectorAll(`#c${n}_rpGrid .rp-chip.on`)].map(e=>e.textContent).join(',');}
+function getStar(group){return parseInt(document.getElementById(`stars-${group}`)?.dataset.val)||3;}
+function setStar(group,val){const wrap=document.getElementById(`stars-${group}`);if(!wrap)return;wrap.dataset.val=val;wrap.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<val));}
+function updateTeamStar(){
+  setTimeout(()=>{
+    let cnt=0;
+    for(let i=1;i<=5;i++){if(document.getElementById('tc_'+i)?.checked)cnt++;}
+    const wrap=document.getElementById('stars-team');
+    if(wrap)wrap.dataset.val=cnt;
+    for(let i=1;i<=5;i++){
+      const s=document.getElementById('tstar-'+i);
+      if(s)s.className=i<=cnt?'star on':'star';
+    }
+    const lbl=document.getElementById('teamStarLabel');
+    if(lbl)lbl.textContent=cnt+' / 5';
+  },50);
+}
+
+// 상담에서 클로징 정보 수집
+function getConsultClosings(n){
+  const result=[];
+  const selectedCats=[...document.querySelectorAll(`#c${n}_catGrid .cat-chip.on`)].map(c=>c.textContent);
+  selectedCats.forEach(cat=>{
+    const safeId=cat.replace(/[^a-zA-Z0-9가-힣]/g,'');
+    const insType=CATEGORY_TYPE[cat]||'nonlife';
+    const company=document.getElementById(`c${n}_comp_${safeId}`)?.value||'';
+    const product=document.getElementById(`c${n}_prod_${safeId}`)?.value||'';
+    const monthlyRaw=document.getElementById(`c${n}_monthly_${safeId}`)?.value.replace(/[^0-9]/g,'')||'0';
+    const period=document.getElementById(`c${n}_period_${safeId}`)?.value||'';
+    result.push({category:cat,insurance_type:insType==='life'?'생명보험':'손해보험',nonlife_company:company,product_name:product,monthly_premium:parseInt(monthlyRaw)||0,payment_period:period});
+  });
+  return result;
+}
+
+// ===== 사업 파트 =====
+let bizTargets=[];
+function renderBizSection(){
+  renderBizTree();
+  renderBizTargets();
+}
+
+function renderBizTree(){
+  const el=document.getElementById('bizTree');
+  if(bizTargets.length===0){
+    el.innerHTML=`<div style="text-align:center;padding:16px 0"><div class="tree-box root" style="display:inline-block">${currentUser.name}</div><div style="font-size:11px;color:var(--gray-500);margin-top:8px">대상자를 추가하면 계보도가 업데이트됩니다</div></div>`;
+    return;
+  }
+  // 입과한 사람 / 미입과 구분
+  const joined=bizTargets.filter(t=>t.joined);
+  const notJoined=bizTargets.filter(t=>!t.joined);
+
+  let html=`<div style="text-align:center;margin-bottom:12px"><div class="tree-box root" style="display:inline-block">${currentUser.name}</div></div>`;
+
+  if(joined.length>0){
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--success);margin-bottom:6px">✅ 입과 완료 (${joined.length}명)</div>`;
+    html+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">`;
+    joined.forEach(t=>{
+      const pctClass=t.joinPct>=80?'pct-high':t.joinPct>=50?'pct-mid':'pct-low';
+      html+=`<div class="tree-box member" style="cursor:default"><div>${t.name||'이름없음'}</div><div class="tree-box-sub ${pctClass}">입과 ${t.joinPct||100}%</div></div>`;
+    });
+    html+='</div>';
+  }
+
+  if(notJoined.length>0){
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:6px">🎯 진행 중 (${notJoined.length}명)</div>`;
+    html+=`<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+    notJoined.forEach(t=>{
+      const pctClass=t.joinPct>=80?'pct-high':t.joinPct>=50?'pct-mid':'pct-low';
+      html+=`<div class="tree-box client"><div>${t.name||'이름없음'}</div><div class="tree-box-sub ${pctClass}">입과율 ${t.joinPct||0}%</div></div>`;
+    });
+    html+='</div>';
+  }
+  el.innerHTML=html;
+}
+
+function renderBizTargets(){
+  const el=document.getElementById('bizTargetList');
+  el.innerHTML='';
+  if(bizTargets.length===0){
+    el.innerHTML='<div class="empty-state" style="padding:20px"><p style="font-size:12px">+ 대상자 추가 버튼으로 사업 활동 대상자를 입력하세요</p></div>';
+    return;
+  }
+  bizTargets.forEach((t,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='border:1.5px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;margin-bottom:8px';
+    div.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer" onclick="toggleBizTarget(${i})">
+        <span style="font-size:12px;font-weight:600;color:var(--primary)" id="biz-head-${i}">${t.name||'대상자 '+(i+1)}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:14px;color:var(--gray-300)" id="biz-arrow-${i}">${t.collapsed?'▶':'▼'}</span>
+          <button class="consult-del" onclick="event.stopPropagation();removeBizTarget(${i})">삭제</button>
+        </div>
+      </div>
+      <div id="biz-content-${i}" style="display:${t.collapsed?'none':'block'}">
+      <div class="form-row col2">
+        <div><div class="field-label">성함</div><input type="text" value="${t.name||''}" onchange="bizTargets[${i}].name=this.value;document.getElementById('biz-head-'+${i}).textContent=this.value||'대상자 '+(${i}+1);renderBizTree()" placeholder="홍길동" /></div>
+        <div><div class="field-label">직장/소속</div><input type="text" value="${t.workplace||''}" onchange="bizTargets[${i}].workplace=this.value" placeholder="○○회사" /></div>
+      </div>
+      <div class="form-row col3">
+        <div><div class="field-label">주요 니즈</div><input type="text" value="${t.needs||''}" onchange="bizTargets[${i}].needs=this.value" placeholder="수입보장 등" /></div>
+        <div><div class="field-label">만남 일자</div><input type="text" value="${t.meetDate||''}" onchange="bizTargets[${i}].meetDate=this.value" placeholder="2025-06-15" /></div>
+        <div><div class="field-label">입과율 (%)</div>
+          <select onchange="bizTargets[${i}].joinPct=parseInt(this.value);renderBizTree()">
+            <option value="0" ${(t.joinPct||0)===0?'selected':''}>0%</option>
+            <option value="20" ${t.joinPct===20?'selected':''}>20%</option>
+            <option value="40" ${t.joinPct===40?'selected':''}>40%</option>
+            <option value="60" ${t.joinPct===60?'selected':''}>60%</option>
+            <option value="80" ${t.joinPct===80?'selected':''}>80%</option>
+            <option value="100" ${t.joinPct===100?'selected':''}>100%</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label class="check-row" style="background:var(--success-light);border-radius:var(--radius)">
+          <input type="checkbox" ${t.joined?'checked':''} onchange="bizTargets[${i}].joined=this.checked;renderBizTree()" />
+          ✅ 입과 완료
+        </label>
+      </div>
+      <div class="form-row col1" style="margin-top:8px">
+        <div><div class="field-label">제안 활동 내용</div><textarea onchange="bizTargets[${i}].proposal=this.value" placeholder="어떤 방식으로 입사 제안을 했나요?">${t.proposal||''}</textarea></div>
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function addBizTarget(){
+  // 기존 항목 모두 축소
+  bizTargets.forEach((t,i)=>{ t.collapsed=true; });
+  bizTargets.push({name:'',workplace:'',needs:'',meetDate:'',joinPct:0,joined:false,proposal:'',collapsed:false});
+  renderBizTargets();renderBizTree();
+}
+function toggleBizTarget(i){
+  bizTargets[i].collapsed=!bizTargets[i].collapsed;
+  const content=document.getElementById('biz-content-'+i);
+  const arrow=document.getElementById('biz-arrow-'+i);
+  if(content)content.style.display=bizTargets[i].collapsed?'none':'block';
+  if(arrow)arrow.textContent=bizTargets[i].collapsed?'▶':'▼';
+}
+function removeBizTarget(i){bizTargets.splice(i,1);renderBizTargets();renderBizTree();}
+
+// ===== 근무태도 요약 =====
+function buildAttitudeSummary(){
+  const today=getToday();
+  const late=document.getElementById('att_late').checked;
+  const noReport=document.getElementById('att_noreport').checked;
+  const share=document.getElementById('att_share').checked;
+  const edu=document.getElementById('att_edu').checked;
+  const returnChk=document.getElementById('att_return').checked;
+  const team=parseInt(document.getElementById('stars-team')?.dataset.val)||0;
+  const note=document.getElementById('att_note').value;
+  const tc1=document.getElementById('tc_1')?.checked;
+  const tc2=document.getElementById('tc_2')?.checked;
+  const tc3=document.getElementById('tc_3')?.checked;
+  const tc4=document.getElementById('tc_4')?.checked;
+  const tc5=document.getElementById('tc_5')?.checked;
+  const lines=[
+    `📅 ${today}`,
+    ``,
+    `【 근무 체크리스트 】`,
+    `⚠️  지각: ${late?'해당':'없음'}`,
+    `📵 미보고: ${noReport?'해당':'없음'}`,
+    `📢 공유: ${share?'✅ 완료':'❌ 미완료'}`,
+    `📚 교육 실행: ${edu?'✅ 완료':'❌ 미완료'}`,
+    `🏢 회사 복귀: ${returnChk?'✅ 완료':'❌ 미완료'}`,
+    ``,
+    `【 팀 기여 】${'★'.repeat(team)}${'☆'.repeat(5-team)} (${team}/5)`,
+    `${tc1?'✅':'❌'} 오전 교육 실행·공유`,
+    `${tc2?'✅':'❌'} 팀원 피드백`,
+    `${tc3?'✅':'❌'} 피드백 체킹`,
+    `${tc4?'✅':'❌'} 기사 공유`,
+    `${tc5?'✅':'❌'} 전우조 TA`,
+    ``,
+    `【 하루 소감 】`,
+    note||'(없음)',
+  ];
+  return lines.join('\n');
+}
+
+function copyAttitudeSummary(){
+  const text=buildAttitudeSummary();
+  navigator.clipboard.writeText(text).then(()=>toast('복사되었습니다!','success')).catch(()=>{
+    const el=document.createElement('textarea');el.value=text;document.body.appendChild(el);el.select();document.execCommand('copy');document.body.removeChild(el);toast('복사되었습니다!','success');
+  });
+}
+
+async function loadAttitudeHistory(){
+  const el=document.getElementById('attitudeHistory');
+  if(demoMode){el.innerHTML='<div class="empty-state" style="padding:20px"><p>데모 모드에서는 기록이 표시되지 않습니다</p></div>';return;}
+  try{
+    const {data}=await sb.from('daily_reports').select('*').eq('member_id',currentUser.id).order('report_date',{ascending:false}).limit(30);
+    if(!data||data.length===0){el.innerHTML='<div class="empty-state" style="padding:20px"><p>저장된 기록이 없습니다</p></div>';return;}
+    el.innerHTML='';
+    data.forEach(rep=>{
+      const reply=rep.star_reply||3;const team=rep.star_team||3;
+      const summary=[
+        `⚠️ 지각: ${rep.is_late?'해당':'없음'} | 📵 미보고: ${rep.is_noreport?'해당':'없음'}`,
+        `📢 공유: ${rep.att_share?'✅':'❌'} | 📚 교육: ${rep.att_edu?'✅':'❌'} | 🏢 복귀: ${rep.att_return?'✅':'❌'}`,
+        `💬 회신: ${'★'.repeat(reply)}${'☆'.repeat(5-reply)} | 🤝 팀기여: ${'★'.repeat(team)}${'☆'.repeat(5-team)}`,
+        ``,
+        rep.daily_note||'(소감 없음)',
+      ].join('\n');
+      const item=document.createElement('div');item.className='history-item';
+      const headId='hist-'+rep.report_date;
+      item.innerHTML=`
+        <div class="history-head" onclick="toggleHistory('${headId}')">
+          <span style="font-size:13px;font-weight:600">${rep.report_date}</span>
+          <span style="font-size:11px;color:var(--gray-500)">▼</span>
+        </div>
+        <div class="history-body" id="${headId}">${summary}</div>
+      `;
+      el.appendChild(item);
+    });
+  }catch(e){el.innerHTML='<div class="empty-state"><p>로딩 오류</p></div>';}
+}
+
+function toggleHistory(id){
+  const el=document.getElementById(id);if(!el)return;
+  el.classList.toggle('open');
+  const head=el.previousElementSibling;
+  if(head)head.querySelector('span:last-child').textContent=el.classList.contains('open')?'▲':'▼';
+}
+
+// ===== 저장 =====
+async function saveReport(){
+  showLoading(true);const today=getToday();
+  try{
+    const reportData={
+      member_id:currentUser.id,member_name:currentUser.name,report_date:today,
+      is_late:document.getElementById('att_late').checked,
+      is_noreport:document.getElementById('att_noreport').checked,
+      att_share:document.getElementById('att_share').checked,
+      att_edu:document.getElementById('att_edu').checked,
+      att_return:document.getElementById('att_return').checked,
+      star_team:parseInt(document.getElementById('stars-team')?.dataset.val)||0,
+      daily_note:document.getElementById('att_note').value,
+      biz_targets:JSON.stringify(bizTargets),
+    };
+
+    // 새 테이블 방식으로 상담 데이터 수집
+    const consultInserts=[];
+    // 생명보험 행
+    lifeRows.forEach((row,i)=>{
+      if(!row.name.trim())return;
+      const monthly=parseInt(row.monthly||0);
+      const parts=row.product?row.product.split('__'):['',''];
+      consultInserts.push({
+        report_date:today,member_id:currentUser.id,member_name:currentUser.name,
+        consult_order:i+1,policyholder:row.name,insured:row.insured||row.name,
+        funnel_stage:'고객',result:'클로징',
+        insurance_type:'생명보험',category:row.lifeType||'장기',
+        nonlife_company:parts[0]||'',product_name:parts[1]||'',
+        nl_type:row.lifeType||'장기',
+        monthly_premium:monthly,payment_period:'',
+        referrer:row.referrer||'',
+        check_call:false,check_needs:false,rp_used:'',needs_note:'',memo:'',
+      });
+    });
+    // 손해보험 행
+    nonlifeRows.forEach((row,i)=>{
+      if(!row.name.trim())return;
+      const monthly=parseInt(row.monthly||0);
+      const isAutoRow=(row.type||'장기')==='자동차';
+      consultInserts.push({
+        report_date:today,member_id:currentUser.id,member_name:currentUser.name,
+        consult_order:lifeRows.length+i+1,policyholder:row.name,
+        insured:row.insured||row.name,
+        funnel_stage:'고객',result:'클로징',
+        insurance_type:'손해보험',category:row.type||'장기',
+        nonlife_company:row.company||'',product_name:'',
+        nl_type:row.type||'장기',
+        monthly_premium:isAutoRow?0:monthly,payment_period:'',
+        referrer:row.referrer||'',
+        check_call:false,check_needs:false,rp_used:'',needs_note:'',memo:'',
+      });
+    });
+
+    if(demoMode){
+      document.getElementById('attitudeSummary').textContent=buildAttitudeSummary();
+      toast('저장 완료 (데모 모드)','success');
+    } else {
+      let existingId=null;
+      try{const {data:ex}=await sb.from('daily_reports').select('id').eq('member_id',currentUser.id).eq('report_date',today).single();if(ex)existingId=ex.id;}catch(e2){existingId=null;}
+      let reportId;
+      if(existingId){
+        const {error:ue}=await sb.from('daily_reports').update(reportData).eq('id',existingId);
+        if(ue)throw ue;
+        reportId=existingId;
+        await sb.from('consultations').delete().eq('report_id',existingId);
+      } else {
+        const {data:nr,error:ie}=await sb.from('daily_reports').insert(reportData).select().single();
+        if(ie)throw ie;
+        reportId=nr.id;
+      }
+      if(consultInserts.length>0){
+        const inserts=consultInserts.map(c=>({...c,report_id:reportId}));
+        const {error:ce}=await sb.from('consultations').insert(inserts);
+        if(ce)throw ce;
+      }
+      document.getElementById('attitudeSummary').textContent=buildAttitudeSummary();
+      toast('저장 완료! 오늘도 수고하셨습니다 🎉','success');
+    }
+  }catch(e){toast('저장 실패: '+e.message,'error');}
+  showLoading(false);
+}
+
+// ===== 오늘 활동 불러오기 =====
+async function loadTodayReport(){
+  if(demoMode)return;
+  try{
+    const today=getToday();let rep=null;
+    try{const {data:rd}=await sb.from('daily_reports').select('*').eq('member_id',currentUser.id).eq('report_date',today).single();rep=rd;}catch(e2){rep=null;}
+    if(!rep)return;
+    if(rep.is_late)document.getElementById('att_late').checked=true;
+    if(rep.is_noreport)document.getElementById('att_noreport').checked=true;
+    if(rep.att_share)document.getElementById('att_share').checked=true;
+    if(rep.att_edu)document.getElementById('att_edu').checked=true;
+    if(rep.att_return)document.getElementById('att_return').checked=true;
+    if(rep.daily_note)document.getElementById('att_note').value=rep.daily_note;
+    if(rep.biz_targets)try{bizTargets=JSON.parse(rep.biz_targets)||[];}catch(e){}
+    if(rep.star_team){
+      const wrap=document.getElementById('stars-team');
+      if(wrap)wrap.dataset.val=rep.star_team;
+      for(let i=1;i<=5;i++){const s=document.getElementById('tstar-'+i);if(s)s.className=i<=rep.star_team?'star on':'star';}
+      const lbl=document.getElementById('teamStarLabel');if(lbl)lbl.textContent=rep.star_team+' / 5';
+    }
+    document.getElementById('attitudeSummary').textContent=buildAttitudeSummary();
+    // 오늘 상담 기록 불러오기 (새 테이블 방식)
+    try{
+      const {data:cons}=await sb.from('consultations').select('*').eq('member_id',currentUser.id).eq('report_date',today).eq('result','클로징');
+      if(cons&&cons.length>0){
+        lifeRows=[];nonlifeRows=[];
+        cons.forEach(c=>{
+          if(c.insurance_type==='생명보험'){
+            lifeRows.push({name:c.policyholder||'',result:c.result,product:c.nonlife_company?c.nonlife_company+'__'+c.product_name:'',monthly:c.monthly_premium?String(c.monthly_premium):'',referrer:c.referrer||''});
+          } else if(c.insurance_type==='손해보험'){
+            nonlifeRows.push({name:c.policyholder||'',result:c.result,company:c.nonlife_company||'',type:c.nl_type||c.category||'장기',monthly:c.monthly_premium?String(c.monthly_premium):'',referrer:c.referrer||''});
+          }
+        });
+        renderLifeTable();renderNonlifeTable();
+        updateLifeSummary();updateNonlifeSummary();
+      }
+    }catch(e2){}
+  }catch(e){}
+}
+
+// ===== 대시보드 =====
+function switchDashTab(tab,el){
+  document.querySelectorAll('#page-dashboard .tab-btn').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['dashStatus','dashConvention','dashAttendance','dashLineage'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.style.display='none';
+  });
+  document.getElementById('dash'+tab.charAt(0).toUpperCase()+tab.slice(1)).style.display='';
+  if(tab==='convention')loadDashConvention();
+  if(tab==='attendance')loadDashAttendance();
+  if(tab==='lineage'){renderOrgChart();loadDashLineage();}
+}
+
+// ===== 설정값 로드/저장 =====
+function getSettings(){
+  try{return JSON.parse(localStorage.getItem('team_settings')||'{}');}catch(e){return {};}
+}
+function saveSettings(obj){
+  const curr=getSettings();
+  localStorage.setItem('team_settings',JSON.stringify({...curr,...obj}));
+}
+function loadGoals(){
+  const s=getSettings();
+  const fields={goal_canp:s.goal_canp||1000,goal_count:s.goal_count||20,goal_nonlife:s.goal_nonlife||100,goal_3w:s.goal_3w||3,goal_convention:s.goal_convention||3};
+  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+}
+function saveGoals(){
+  const s={
+    goal_canp:parseInt(document.getElementById('goal_canp')?.value)||1000,
+    goal_count:parseInt(document.getElementById('goal_count')?.value)||20,
+    goal_nonlife:parseInt(document.getElementById('goal_nonlife')?.value)||100,
+    goal_3w:parseInt(document.getElementById('goal_3w')?.value)||3,
+    goal_convention:parseInt(document.getElementById('goal_convention')?.value)||3,
+  };
+  saveSettings(s);toast('목표 설정 저장 완료','success');
+}
+function loadPromoAdmin(){
+  const s=getSettings();
+  const fields={
+    winter_a_amount:s.winter_a_amount||1550,winter_a_count:s.winter_a_count||20,winter_a_canp:s.winter_a_canp||1550,winter_b_nonlife:s.winter_b_nonlife||100,
+    summer_a_amount:s.summer_a_amount||1550,summer_a_count:s.summer_a_count||20,summer_a_canp:s.summer_a_canp||1550,summer_b_nonlife:s.summer_b_nonlife||100
+  };
+  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.value=val;});
+}
+function savePromo(type){
+  const s={};
+  ['a_amount','a_count','a_canp','b_nonlife'].forEach(k=>{
+    const el=document.getElementById(type+'_'+k);
+    if(el)s[type+'_'+k]=parseInt(el.value)||0;
+  });
+  saveSettings(s);toast('프로모션 조건 저장 완료','success');
+}
+
+// ===== 컨벤션 시즌 계산 =====
+const CONVENTION_SEASONS=[
+  {name:'시즌1',months:[1,2],promo:'winter'},
+  {name:'시즌2',months:[3,4],promo:null},
+  {name:'시즌3',months:[5,6],promo:null},
+  {name:'시즌4',months:[7,8],promo:'summer'},
+  {name:'시즌5',months:[9,10],promo:null},
+  {name:'시즌6',months:[11,12],promo:null},
+];
+function getSeasonForMonth(month){
+  return CONVENTION_SEASONS.find(s=>s.months.includes(month));
+}
+function getCurrentSeason(){
+  const m=new Date().getMonth()+1;
+  return getSeasonForMonth(m);
+}
+
+async function loadConventionAdmin(){
+  const el=document.getElementById('conventionMemberTable');
+  if(!el)return;
+  let members,consults;
+  if(demoMode){members=DEMO_MEMBERS.filter(m=>m.role==='member');consults=DEMO_CONSULTS;}
+  else{
+    try{
+      const year=new Date().getFullYear();
+      const [mr,cr]=await Promise.all([
+        sb.from('members').select('*').eq('role','member'),
+        sb.from('consultations').select('*').eq('result','클로징').gte('report_date',year+'-01-01'),
+      ]);
+      members=mr.data||[];consults=cr.data||[];
+    }catch(e){el.innerHTML='<p>로딩 오류</p>';return;}
+  }
+  const settings=getSettings();
+  const rateMap=await getRateMap();
+  renderConventionTable(el,members,consults,rateMap,settings);
+}
+
+function renderConventionTable(el,members,consults,rateMap,settings){
+  const targetConv=settings.goal_convention||3;
+  let html=`<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>팀원</th>`;
+  CONVENTION_SEASONS.forEach(s=>{html+=`<th style="text-align:center">${s.name}<div style="font-size:10px;font-weight:400;color:var(--gray-500)">${s.months[0]}~${s.months[1]}월${s.promo?'<br>'+( s.promo==='winter'?'❄️윈터':'☀️썸머'):''}`;html+='</div></th>';});
+  html+=`<th style="text-align:center">달성<br>횟수</th></tr></thead><tbody>`;
+
+  const year=new Date().getFullYear();
+  members.forEach(m=>{
+    html+=`<tr><td><strong>${m.name}</strong></td>`;
+    let totalConv=0;
+    CONVENTION_SEASONS.forEach(s=>{
+      const mCons=consults.filter(c=>{
+        if(c.member_id!==m.id)return false;
+        const d=new Date(c.report_date);
+        return d.getFullYear()===year&&s.months.includes(d.getMonth()+1)&&c.insurance_type==='생명보험';
+      });
+      let canp=0;
+      mCons.forEach(c=>{const key=c.nonlife_company+'__'+c.product_name;canp+=(c.monthly_premium||0)*(rateMap[key]||10);});
+      const canpMan=Math.round(canp/10000);
+      const achieved=canpMan>=1550;
+      if(achieved)totalConv++;
+      html+=`<td style="text-align:center">`;
+      if(achieved)html+=`<span style="color:var(--success);font-size:16px">✅</span><div style="font-size:10px;color:var(--success)">${canpMan}만</div>`;
+      else html+=`<span style="color:var(--gray-300);font-size:16px">○</span><div style="font-size:10px;color:var(--gray-500)">${canpMan}만</div>`;
+      html+='</td>';
+    });
+    const color=totalConv>=targetConv?'var(--success)':totalConv>0?'var(--warning)':'var(--danger)';
+    html+=`<td style="text-align:center;font-size:18px;font-weight:600;color:${color}">${totalConv}/${targetConv}</td>`;
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+async function getRateMap(){
+  try{
+    const rates=demoMode?DEMO_RATES:(await sb.from('conversion_rates').select('*')).data||[];
+    const map={};rates.forEach(r=>map[(r.company_name||'')+'__'+(r.product_name||'')]=r.rate||10);
+    return map;
+  }catch(e){console.warn('getRateMap error:',e);return{};}
+}
+
+async function loadDashConvention(){
+  const el=document.getElementById('dashConventionContent');
+  if(!el)return;
+  let members,consults;
+  if(demoMode){members=DEMO_MEMBERS.filter(m=>m.role==='member');consults=DEMO_CONSULTS;}
+  else{
+    try{
+      const year=new Date().getFullYear();
+      el.innerHTML='<div class="empty-state"><p>데이터 불러오는 중...</p></div>';
+      const mr=await sb.from('members').select('*').eq('role','member');
+      if(mr.error)throw new Error('members: '+mr.error.message);
+      members=mr.data||[];
+      el.innerHTML='<div class="empty-state"><p>상담 데이터 불러오는 중...</p></div>';
+      const cr=await sb.from('consultations').select('id,member_id,member_name,report_date,insurance_type,monthly_premium,nonlife_company,product_name,category').eq('result','클로징').gte('report_date',year+'-01-01');
+      if(cr.error)throw new Error('consultations: '+cr.error.message);
+      consults=cr.data||[];
+    }catch(e){
+      el.innerHTML='<div class="empty-state"><div class="ei">⚠️</div><p style="color:red">오류: '+e.message+'</p></div>';
+      return;
+    }
+  }
+  el.innerHTML='<div class="empty-state"><p>환산율 불러오는 중...</p></div>';
+  const settings=getSettings();
+  let rateMap={};
+  try{rateMap=await getRateMap();}catch(e){console.warn('rateMap error:',e);}
+  const targetConv=settings.goal_convention||3;
+  const currSeason=getCurrentSeason();
+
+  const year2=new Date().getFullYear();
+  let teamTotalConv=0;
+  const memberConvData=members.map(m=>{
+    let total=0;
+    const seasonData=CONVENTION_SEASONS.map(s=>{
+      const mCons=consults.filter(c=>{
+        if(c.member_id!==m.id)return false;
+        const d=new Date(c.report_date);
+        return d.getFullYear()===year2&&s.months.includes(d.getMonth()+1)&&c.insurance_type==='생명보험'&&(c.nl_type||c.category||'장기')!=='실비'&&(c.monthly_premium||0)>=10000&&c.result==='클로징';
+      });
+      let canp=0;
+      mCons.forEach(c=>{const key=c.nonlife_company+'__'+c.product_name;canp+=(c.monthly_premium||0)*(rateMap[key]||10);});
+      const canpMan=Math.round(canp/10000);
+      const achieved=canpMan>=1550;
+      if(achieved)total++;
+      return {canpMan,achieved,season:s};
+    });
+    teamTotalConv+=total;
+    return {m,total,seasonData};
+  });
+
+  let html=`<div class="card" style="margin-bottom:14px">
+    <div class="card-title"><span class="dot"></span> 🏆 컨벤션 달성 현황 (${new Date().getFullYear()}년)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--primary-light);border-radius:var(--radius);padding:12px;text-align:center;border:1px solid rgba(26,79,160,.15)">
+        <div style="font-size:11px;color:var(--primary);font-weight:600;margin-bottom:4px">현재 시즌</div>
+        <div style="font-size:16px;font-weight:600;color:var(--primary)">${currSeason?currSeason.name:'없음'}</div>
+        <div style="font-size:11px;color:var(--gray-500)">${currSeason?currSeason.months[0]+'~'+currSeason.months[1]+'월':'-'}</div>
+      </div>
+      <div style="background:var(--success-light);border-radius:var(--radius);padding:12px;text-align:center;border:1px solid rgba(26,122,74,.15)">
+        <div style="font-size:11px;color:var(--success);font-weight:600;margin-bottom:4px">팀 달성 합계</div>
+        <div style="font-size:22px;font-weight:700;color:var(--success)">${teamTotalConv}회</div>
+        <div style="font-size:11px;color:var(--gray-500)">${members.length}명 합산</div>
+      </div>
+      <div style="background:var(--warning-light);border-radius:var(--radius);padding:12px;text-align:center;border:1px solid rgba(160,92,10,.15)">
+        <div style="font-size:11px;color:var(--warning);font-weight:600;margin-bottom:4px">개인 목표</div>
+        <div style="font-size:22px;font-weight:700;color:var(--warning)">${targetConv}회</div>
+        <div style="font-size:11px;color:var(--gray-500)">6시즌 중 달성 목표</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">`;
+
+  memberConvData.forEach(({m,total,seasonData})=>{
+    const pct=Math.round((total/targetConv)*100);
+    const color=total>=targetConv?'var(--success)':total>=targetConv-1?'var(--warning)':'var(--danger)';
+    html+=`<div style="border:1.5px solid ${total>=targetConv?'var(--success)':'var(--gray-200)'};border-radius:var(--radius-lg);padding:14px;background:${total>=targetConv?'var(--success-light)':'#fff'}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="m-avatar" style="width:36px;height:36px;font-size:13px">${initials(m.name)}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${m.name}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <div style="background:var(--gray-200);border-radius:4px;height:7px;flex:1;overflow:hidden">
+              <div style="width:${Math.min(100,pct)}%;height:7px;border-radius:4px;background:${color}"></div>
+            </div>
+            <span style="font-size:12px;font-weight:600;color:${color}">${total}/${targetConv}회 (${pct}%)</span>
+          </div>
+        </div>
+        <div style="font-size:20px;color:#f0a500">${'★'.repeat(total)}${'☆'.repeat(Math.max(0,targetConv-total))}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">`;
+    seasonData.forEach(({canpMan,achieved,season})=>{
+      const isCurr=currSeason&&currSeason.name===season.name;
+      html+=`<div style="text-align:center;padding:8px 4px;border-radius:var(--radius);background:${achieved?'var(--success-light)':isCurr?'var(--primary-light)':'var(--gray-50)'};border:1px solid ${achieved?'var(--success)':isCurr?'var(--primary)':'var(--gray-200)'}">
+        <div style="font-size:10px;font-weight:600;color:${achieved?'var(--success)':isCurr?'var(--primary)':'var(--gray-500)'};margin-bottom:2px">${season.name}${season.promo?' '+(season.promo==='winter'?'❄️':'☀️'):''}</div>
+        <div style="font-size:18px">${achieved?'✅':'○'}</div>
+        <div style="font-size:10px;font-weight:600;color:${achieved?'var(--success)':'var(--gray-400)'};margin-top:2px">${canpMan>0?canpMan+'만':'-'}</div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  html+=`</div></div>`;
+
+  // 현재 시즌 프로모션 현황
+  if(currSeason&&currSeason.promo){
+    html+=renderPromoStatus(members,consults,currSeason.promo,settings,rateMap,year);
+  }
+  el.innerHTML=html;
+}
+
+function renderPromoStatus(members,consults,promoType,settings,rateMap,year){
+  const isWinter=promoType==='winter';
+  const months=isWinter?[1,2]:[7,8];
+  const title=isWinter?'❄️ 윈터 프로모션':'☀️ 썸머 프로모션';
+  const aAmount=settings[promoType+'_a_amount']||1550;
+  const aCount=settings[promoType+'_a_count']||20;
+  const aCanp=settings[promoType+'_a_canp']||1550;
+  const bNonlife=settings[promoType+'_b_nonlife']||100;
+
+  let html=`<div class="card"><div class="card-title"><span class="dot" style="background:${isWinter?'var(--primary)':'#f0a500'}"></span> ${title} 달성 현황</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;font-size:12px">
+      <div style="background:var(--primary-light);border-radius:var(--radius);padding:8px;border:1px solid rgba(26,79,160,.15)">
+        <strong style="color:var(--primary)">A안:</strong> 생명 월납합산 ${aAmount}만 + ${aCount}건 + CANP ${aCanp}만
+      </div>
+      <div style="background:var(--success-light);border-radius:var(--radius);padding:8px;border:1px solid rgba(26,122,74,.15)">
+        <strong style="color:var(--success)">B안:</strong> A안 조건 + 손해보험 월납 ${bNonlife}만 추가
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">`;
+
+  members.forEach(m=>{
+    const mCons=consults.filter(c=>{
+      if(c.member_id!==m.id)return false;
+      const d=new Date(c.report_date);
+      return d.getFullYear()===year&&months.includes(d.getMonth()+1);
+    });
+    const lifeCons=mCons.filter(c=>c.insurance_type==='생명보험'&&c.result==='클로징'&&(c.monthly_premium||0)>=10000&&(c.nl_type||c.category||'장기')!=='실비');
+    const lifeAmountMan=Math.round(lifeCons.reduce((s,c)=>s+(c.monthly_premium||0),0)/10000);
+    const lifeCount=lifeCons.length;
+    let canp=0;
+    lifeCons.forEach(c=>{const key=c.nonlife_company+'__'+c.product_name;canp+=(c.monthly_premium||0)*(rateMap[key]||10);});
+    const canpMan=Math.round(canp/10000);
+    const nonlifeMan=Math.round(mCons.filter(c=>c.insurance_type==='손해보험'&&(c.nl_type||c.category)!=='실비'&&c.result==='클로징'&&(c.monthly_premium||0)>=10000).reduce((s,c)=>s+(c.monthly_premium||0),0)/10000);
+
+    const achA=lifeAmountMan>=aAmount&&lifeCount>=aCount&&canpMan>=aCanp;
+    const achB=achA&&nonlifeMan>=bNonlife;
+    const ach=achA||achB;
+    const achLabel=achB?'B안 달성':achA?'A안 달성':'미달성';
+
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${ach?'var(--success-light)':'var(--gray-50)'};border-radius:var(--radius);border:1px solid ${ach?'var(--success)':'var(--gray-200)'}">
+      <div class="m-avatar" style="width:28px;height:28px;font-size:11px">${initials(m.name)}</div>
+      <div style="flex:1">
+        <strong style="font-size:13px">${m.name}</strong>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px">
+          <div style="font-size:10px;background:#fff;border-radius:4px;padding:3px 6px;text-align:center">
+            <div style="color:var(--gray-500)">생명월납</div>
+            <div style="font-weight:600;color:${lifeAmountMan>=aAmount?'var(--success)':'var(--danger)'}">${lifeAmountMan}만</div>
+            <div style="color:var(--gray-400)">기준 ${aAmount}만</div>
+          </div>
+          <div style="font-size:10px;background:#fff;border-radius:4px;padding:3px 6px;text-align:center">
+            <div style="color:var(--gray-500)">건수</div>
+            <div style="font-weight:600;color:${lifeCount>=aCount?'var(--success)':'var(--danger)'}">${lifeCount}건</div>
+            <div style="color:var(--gray-400)">기준 ${aCount}건</div>
+          </div>
+          <div style="font-size:10px;background:#fff;border-radius:4px;padding:3px 6px;text-align:center">
+            <div style="color:var(--gray-500)">CANP</div>
+            <div style="font-weight:600;color:${canpMan>=aCanp?'var(--success)':'var(--danger)'}">${canpMan}만</div>
+            <div style="color:var(--gray-400)">기준 ${aCanp}만</div>
+          </div>
+          <div style="font-size:10px;background:#fff;border-radius:4px;padding:3px 6px;text-align:center">
+            <div style="color:var(--gray-500)">손보월납</div>
+            <div style="font-weight:600;color:${nonlifeMan>=bNonlife?'var(--success)':'var(--gray-500)'}">${nonlifeMan}만</div>
+            <div style="color:var(--gray-400)">기준 ${bNonlife}만</div>
+          </div>
+        </div>
+      </div>
+      <span class="badge ${ach?'green':'gray'}" style="flex-shrink:0">${achLabel}</span>
+    </div>`;
+  });
+  html+='</div></div>';
+  return html;
+}
+
+async function loadDashAttendance(){
+  const el=document.getElementById('dashAttendanceContent');
+  if(!el)return;
+  const month=getThisMonth();
+  let members,reports;
+  if(demoMode){members=DEMO_MEMBERS.filter(m=>m.role==='member');reports=[];el.innerHTML='<div class="empty-state" style="padding:20px"><p>데모 모드에서는 근태 데이터가 없습니다</p></div>';return;}
+  try{
+    const [mr,rr]=await Promise.all([
+      sb.from('members').select('*').eq('role','member'),
+      sb.from('daily_reports').select('*').gte('report_date',month+'-01'),
+    ]);
+    members=mr.data||[];reports=rr.data||[];
+  }catch(e){el.innerHTML='<div class="empty-state"><p>로딩 오류</p></div>';return;}
+
+  let teamLate=0,teamNoRep=0,teamShare=0,teamEdu=0,teamRet=0,teamStar=0;
+  const attData=members.map(m=>{
+    const mReps=reports.filter(r=>r.member_id===m.id);
+    const late=mReps.filter(r=>r.is_late).length;
+    const noRep=mReps.filter(r=>r.is_noreport).length;
+    const share=mReps.filter(r=>r.att_share).length;
+    const edu=mReps.filter(r=>r.att_edu).length;
+    const ret=mReps.filter(r=>r.att_return).length;
+    const star=mReps.reduce((s,r)=>s+(r.star_team||0),0);
+    teamLate+=late;teamNoRep+=noRep;teamShare+=share;teamEdu+=edu;teamRet+=ret;teamStar+=star;
+    return {m,late,noRep,share,edu,ret,star,totalDays:mReps.length};
+  });
+
+  const teamTotal=teamShare+teamEdu+teamRet+teamStar;
+  let html=`<div class="card">
+    <div class="card-title"><span class="dot"></span> 📅 당월 근태 현황 <span style="font-size:11px;font-weight:400;color:var(--gray-500)">${month}</span></div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px">
+      <div style="background:${teamLate>0?'var(--danger-light)':'var(--success-light)'};border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:${teamLate>0?'var(--danger)':'var(--success)'};margin-bottom:4px">⚠️ 지각</div>
+        <div style="font-size:22px;font-weight:700;color:${teamLate>0?'var(--danger)':'var(--success)'}">${teamLate}</div>
+        <div style="font-size:10px;color:var(--gray-500)">회</div>
+      </div>
+      <div style="background:${teamNoRep>0?'var(--danger-light)':'var(--success-light)'};border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:${teamNoRep>0?'var(--danger)':'var(--success)'};margin-bottom:4px">📵 미보고</div>
+        <div style="font-size:22px;font-weight:700;color:${teamNoRep>0?'var(--danger)':'var(--success)'}">${teamNoRep}</div>
+        <div style="font-size:10px;color:var(--gray-500)">회</div>
+      </div>
+      <div style="background:var(--primary-light);border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--primary);margin-bottom:4px">📢 공유</div>
+        <div style="font-size:22px;font-weight:700;color:var(--primary)">${teamShare}</div>
+        <div style="font-size:10px;color:var(--gray-500)">회</div>
+      </div>
+      <div style="background:var(--success-light);border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--success);margin-bottom:4px">📚 교육실행</div>
+        <div style="font-size:22px;font-weight:700;color:var(--success)">${teamEdu}</div>
+        <div style="font-size:10px;color:var(--gray-500)">회</div>
+      </div>
+      <div style="background:var(--success-light);border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--success);margin-bottom:4px">🏢 회사복귀</div>
+        <div style="font-size:22px;font-weight:700;color:var(--success)">${teamRet}</div>
+        <div style="font-size:10px;color:var(--gray-500)">회</div>
+      </div>
+      <div style="background:var(--warning-light);border-radius:var(--radius);padding:10px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--warning);margin-bottom:4px">🤝 팀기여</div>
+        <div style="font-size:22px;font-weight:700;color:var(--warning)">${teamStar}</div>
+        <div style="font-size:10px;color:var(--gray-500)">점</div>
+      </div>
+    </div>
+    <div style="background:var(--primary-light);border-radius:var(--radius);padding:10px;text-align:center;margin-bottom:16px;border:1px solid rgba(26,79,160,.2)">
+      <div style="font-size:11px;font-weight:600;color:var(--primary);margin-bottom:3px">팀 활동 총점 (공유+교육실행+회사복귀+팀기여)</div>
+      <div style="font-size:28px;font-weight:700;color:var(--primary)">${teamTotal}점</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">`;
+
+  attData.forEach(({m,late,noRep,share,edu,ret,star,totalDays})=>{
+    const hasPenalty=late>0||noRep>0;
+    html+=`<div style="border:1.5px solid ${hasPenalty?'var(--danger)':'var(--gray-200)'};border-radius:var(--radius-lg);padding:12px;background:${hasPenalty?'var(--danger-light)':'#fff'}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="m-avatar" style="width:32px;height:32px;font-size:12px">${initials(m.name)}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${m.name}</div>
+          <div style="font-size:11px;color:var(--gray-500)">활동일 ${totalDays}일</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          ${late>0?'<span class="badge red">지각 '+late+'회</span>':''}
+          ${noRep>0?'<span class="badge amber">미보고 '+noRep+'회</span>':''}
+          ${!hasPenalty?'<span class="badge green">규율 양호</span>':''}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px">
+        <div style="background:var(--primary-light);border-radius:var(--radius);padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--primary);font-weight:600;margin-bottom:3px">📢 공유</div>
+          <div style="font-size:20px;font-weight:700;color:var(--primary)">${share}</div>
+          <div style="font-size:10px;color:var(--gray-500)">회</div>
+        </div>
+        <div style="background:var(--success-light);border-radius:var(--radius);padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--success);font-weight:600;margin-bottom:3px">📚 교육실행</div>
+          <div style="font-size:20px;font-weight:700;color:var(--success)">${edu}</div>
+          <div style="font-size:10px;color:var(--gray-500)">회</div>
+        </div>
+        <div style="background:var(--success-light);border-radius:var(--radius);padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--success);font-weight:600;margin-bottom:3px">🏢 회사복귀</div>
+          <div style="font-size:20px;font-weight:700;color:var(--success)">${ret}</div>
+          <div style="font-size:10px;color:var(--gray-500)">회</div>
+        </div>
+        <div style="background:var(--warning-light);border-radius:var(--radius);padding:8px;text-align:center">
+          <div style="font-size:10px;color:var(--warning);font-weight:600;margin-bottom:3px">🤝 팀기여</div>
+          <div style="font-size:20px;font-weight:700;color:var(--warning)">${star}</div>
+          <div style="font-size:10px;color:var(--gray-500)">점</div>
+        </div>
+      </div>
+      <div style="background:var(--primary-light);border-radius:var(--radius);padding:8px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;font-weight:600;color:var(--primary)">총점 (공유+교육실행+회사복귀+팀기여)</span>
+        <span style="font-size:18px;font-weight:700;color:var(--primary)">${share+edu+ret+star}점</span>
+      </div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  el.innerHTML=html;
+}
+
+// ===== 조직도 =====
+function getOrgChart(){
+  try{
+    const saved=localStorage.getItem('org_chart');
+    if(saved)return JSON.parse(saved);
+  }catch(e){}
+  // 기본값: 양진환 팀 구조
+  return {
+    root:'양진환 부지점장',
+    nodes:[
+      {name:'이민선',parent:'양진환 부지점장'},
+      {name:'여경환',parent:'양진환 부지점장'},
+      {name:'조현주',parent:'양진환 부지점장'},
+      {name:'김민정',parent:'양진환 부지점장'},
+      {name:'김윤교',parent:'이민선'},
+      {name:'구자랑',parent:'여경환'},
+    ]
+  };
+}
+function saveOrgChart(){
+  const nodes=[];
+  document.querySelectorAll('.org-node-row').forEach(row=>{
+    const name=row.dataset.name;
+    const parent=row.querySelector('.org-parent-select')?.value||'';
+    nodes.push({name,parent});
+  });
+  const root=document.getElementById('org_root')?.value||'양진환 부지점장';
+  localStorage.setItem('org_chart',JSON.stringify({root,nodes}));
+  toast('조직도 저장 완료','success');
+  renderOrgChart();
+}
+function loadOrgEditor(){
+  const el=document.getElementById('orgChartEditor');
+  if(!el)return;
+  const org=getOrgChart();
+  // 전체 이름 목록 (root + nodes)
+  const allNames=[org.root,...org.nodes.map(n=>n.name)];
+  let html=`<div style="margin-bottom:10px">
+    <div class="field-label" style="margin-bottom:4px">최상위 (루트)</div>
+    <input type="text" id="org_root" value="${org.root}" style="max-width:200px" />
+  </div>
+  <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:8px">팀원별 상위자 지정</div>`;
+  org.nodes.forEach(node=>{
+    const parentOpts=allNames.filter(n=>n!==node.name).map(n=>`<option value="${n}" ${n===node.parent?'selected':''}>${n}</option>`).join('');
+    html+=`<div class="org-node-row" data-name="${node.name}" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+      <span style="font-size:13px;font-weight:500;min-width:80px">${node.name}</span>
+      <span style="font-size:12px;color:var(--gray-500)">상위자:</span>
+      <select class="org-parent-select" style="flex:1">
+        <option value="">없음 (루트)</option>
+        ${parentOpts}
+      </select>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+function renderOrgChart(){
+  const el=document.getElementById('dashOrgChart');
+  if(!el)return;
+  const org=getOrgChart();
+  // 트리 구조 빌드
+  const children={};
+  children[org.root]=[];
+  org.nodes.forEach(n=>{
+    if(!children[n.name])children[n.name]=[];
+    const p=n.parent||org.root;
+    if(!children[p])children[p]=[];
+    children[p].push(n.name);
+  });
+
+  function renderNode(name,depth){
+    const kids=children[name]||[];
+    const isRoot=name===org.root;
+    const bgColor=isRoot?'var(--primary)':depth===1?'var(--primary-light)':'var(--gray-50)';
+    const textColor=isRoot?'#fff':depth===1?'var(--primary)':'var(--gray-700)';
+    const borderColor=isRoot?'var(--primary)':depth===1?'var(--primary)':'var(--gray-300)';
+    const clickable=!isRoot;
+    const nodeStyle=`background:${bgColor};color:${textColor};border:2px solid ${borderColor};border-radius:10px;padding:8px 18px;font-size:13px;font-weight:600;white-space:nowrap;min-width:80px;text-align:center;${clickable?'cursor:pointer;transition:all .15s;':''}`;
+    const onclickAttr=clickable?`onclick="showMemberBizDetail('${name}')" title="${name} 대상자 보기"`:'';
+    let html=`<div style="display:flex;flex-direction:column;align-items:center;gap:0">
+      <div style="${nodeStyle}" ${onclickAttr}
+        onmouseover="${clickable?`this.style.opacity='0.8'`:''}"
+        onmouseout="${clickable?`this.style.opacity='1'`:''}">
+        ${name}${clickable?'<div style="font-size:9px;margin-top:2px;opacity:0.7">클릭하여 보기</div>':''}
+      </div>`;
+    if(kids.length>0){
+      html+=`<div style="width:2px;height:16px;background:var(--gray-300)"></div>`;
+      if(kids.length===1){
+        html+=renderNode(kids[0],depth+1);
+      } else {
+        html+=`<div style="display:flex;gap:0;align-items:flex-start;position:relative">`;
+        html+=`<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:calc(100% - 40px);height:2px;background:var(--gray-300)"></div>`;
+        kids.forEach((kid,i)=>{
+          html+=`<div style="display:flex;flex-direction:column;align-items:center;padding:0 12px">
+            <div style="width:2px;height:16px;background:var(--gray-300)"></div>
+            ${renderNode(kid,depth+1)}
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+    }
+    html+=`</div>`;
+    return html;
+  }
+
+  el.innerHTML=`<div class="card" style="margin-bottom:14px">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span> 👥 팀 조직도</div>
+    <div style="overflow-x:auto;padding:16px 8px">
+      <div style="display:flex;justify-content:center">
+        ${renderNode(org.root,0)}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ===== 팀원 대상자 팝업 =====
+async function showMemberBizDetail(memberName){
+  // 모달 생성
+  let modal=document.getElementById('bizDetailModal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='bizDetailModal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.onclick=function(e){if(e.target===modal)closeBizDetailModal();};
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML=`<div style="background:#fff;border-radius:var(--radius-lg);width:100%;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:16px 18px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1">
+      <div>
+        <div style="font-size:15px;font-weight:600">${memberName}</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px">사업 대상자 현황</div>
+      </div>
+      <button onclick="closeBizDetailModal()" style="border:none;background:none;font-size:20px;cursor:pointer;color:var(--gray-500);padding:4px">✕</button>
+    </div>
+    <div id="bizDetailBody" style="padding:16px 18px">
+      <div class="empty-state" style="padding:20px"><p>불러오는 중...</p></div>
+    </div>
+  </div>`;
+  modal.style.display='flex';
+
+  // 데이터 로드
+  const today=getToday();
+  let targets=[];
+  if(demoMode){
+    targets=[];
+  } else {
+    try{
+      // 해당 팀원 찾기
+      const {data:members}=await sb.from('members').select('id,name').eq('name',memberName).limit(1);
+      if(members&&members.length>0){
+        const memberId=members[0].id;
+        const {data:reps}=await sb.from('daily_reports').select('biz_targets,report_date').eq('member_id',memberId).order('report_date',{ascending:false}).limit(1);
+        if(reps&&reps.length>0&&reps[0].biz_targets){
+          try{targets=JSON.parse(reps[0].biz_targets)||[];}catch(e){}
+        }
+      }
+    }catch(e){console.warn(e);}
+  }
+
+  const joined=targets.filter(t=>t.joined);
+  const inProgress=targets.filter(t=>!t.joined&&(t.joinPct||0)>0);
+  const notStarted=targets.filter(t=>!t.joined&&!(t.joinPct||0));
+
+  const body=document.getElementById('bizDetailBody');
+  if(targets.length===0){
+    body.innerHTML='<div class="empty-state" style="padding:20px"><div class="ei">📋</div><p>등록된 대상자가 없습니다</p></div>';
+    return;
+  }
+
+  let html='';
+
+  // 입과 완료
+  if(joined.length>0){
+    html+=`<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span style="background:var(--success-light);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px">✅</span>
+        입과 완료 (${joined.length}명)
+      </div>`;
+    joined.forEach(t=>{
+      html+=`<div style="padding:10px 12px;background:var(--success-light);border-radius:var(--radius);border:1px solid rgba(26,122,74,.2);margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600;color:var(--success)">${t.name||'이름없음'}</span>
+          <span class="badge green">입과완료</span>
+        </div>
+        ${t.workplace?`<div style="font-size:11px;color:var(--gray-500);margin-top:3px">📍 ${t.workplace}</div>`:''}
+        ${t.needs?`<div style="font-size:11px;color:var(--gray-600);margin-top:3px">💡 ${t.needs}</div>`:''}
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  // 진행중
+  if(inProgress.length>0){
+    html+=`<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:var(--warning);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span style="background:var(--warning-light);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px">🔄</span>
+        진행 중 (${inProgress.length}명)
+      </div>`;
+    inProgress.sort((a,b)=>(b.joinPct||0)-(a.joinPct||0)).forEach(t=>{
+      const pct=t.joinPct||0;
+      const pctColor=pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--gray-500)';
+      html+=`<div style="padding:10px 12px;background:#fff;border-radius:var(--radius);border:1.5px solid ${pct>=80?'var(--success)':pct>=50?'#f0a500':'var(--gray-200)'};margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:600">${t.name||'이름없음'}</span>
+          <span style="font-size:12px;font-weight:700;color:${pctColor}">입과율 ${pct}%</span>
+        </div>
+        <div style="background:var(--gray-200);border-radius:4px;height:6px;overflow:hidden;margin-bottom:6px">
+          <div style="width:${pct}%;height:6px;border-radius:4px;background:${pctColor}"></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${t.workplace?`<span style="font-size:11px;color:var(--gray-500)">📍 ${t.workplace}</span>`:''}
+          ${t.meetDate?`<span style="font-size:11px;color:var(--gray-500)">📅 ${t.meetDate}</span>`:''}
+          ${t.needs?`<span style="font-size:11px;color:var(--gray-600)">💡 ${t.needs}</span>`:''}
+        </div>
+        ${t.proposal?`<div style="font-size:11px;color:var(--gray-600);margin-top:4px;padding-top:4px;border-top:1px solid var(--gray-100)">📝 ${t.proposal}</div>`:''}
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  // 미시작
+  if(notStarted.length>0){
+    html+=`<div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span style="background:var(--gray-100);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px">○</span>
+        대상자 (${notStarted.length}명)
+      </div>`;
+    notStarted.forEach(t=>{
+      html+=`<div style="padding:10px 12px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);margin-bottom:6px">
+        <div style="font-size:13px;font-weight:500">${t.name||'이름없음'}</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:3px">
+          ${t.workplace?`<span style="font-size:11px;color:var(--gray-500)">📍 ${t.workplace}</span>`:''}
+          ${t.meetDate?`<span style="font-size:11px;color:var(--gray-500)">📅 ${t.meetDate}</span>`:''}
+          ${t.needs?`<span style="font-size:11px;color:var(--gray-500)">💡 ${t.needs}</span>`:''}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  }
+
+  body.innerHTML=html;
+}
+function closeBizDetailModal(){
+  const modal=document.getElementById('bizDetailModal');
+  if(modal)modal.style.display='none';
+}
+
+async function loadDashLineage(){
+  const el=document.getElementById('dashLineageContent');
+  if(!el)return;
+  let members,reports;
+  if(demoMode){members=DEMO_MEMBERS.filter(m=>m.role==='member');reports=[];el.innerHTML='<div class="empty-state" style="padding:20px"><p>데모 모드에서는 계보 데이터가 없습니다</p></div>';return;}
+  try{
+    const today=getToday();
+    const [mr,rr]=await Promise.all([
+      sb.from('members').select('*').eq('role','member'),
+      sb.from('daily_reports').select('*').eq('report_date',today),
+    ]);
+    members=mr.data||[];reports=rr.data||[];
+  }catch(e){el.innerHTML='<div class="empty-state"><p>로딩 오류</p></div>';return;}
+
+  let html='<div class="card"><div class="card-title"><span class="dot"></span> 👥 계보 인원 현황 (오늘)</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">';
+
+  members.forEach(m=>{
+    const rep=reports.find(r=>r.member_id===m.id);
+    let targets=[];
+    if(rep&&rep.biz_targets){try{targets=JSON.parse(rep.biz_targets)||[];}catch(e){}}
+    const joined=targets.filter(t=>t.joined).length;
+    const inProgress=targets.filter(t=>!t.joined&&(t.joinPct||0)>0).length;
+    const total=targets.length;
+    html+=`<div style="border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="m-avatar" style="width:28px;height:28px;font-size:11px">${initials(m.name)}</div>
+        <strong>${m.name}</strong>
+        <span style="font-size:11px;color:var(--gray-500)">총 ${total}명</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center">
+        <div style="background:var(--success-light);border-radius:var(--radius);padding:8px">
+          <div style="font-size:10px;color:var(--success);font-weight:600">입과완료</div>
+          <div style="font-size:20px;font-weight:600;color:var(--success)">${joined}</div>
+        </div>
+        <div style="background:var(--warning-light);border-radius:var(--radius);padding:8px">
+          <div style="font-size:10px;color:var(--warning);font-weight:600">진행중</div>
+          <div style="font-size:20px;font-weight:600;color:var(--warning)">${inProgress}</div>
+        </div>
+        <div style="background:var(--gray-50);border-radius:var(--radius);padding:8px">
+          <div style="font-size:10px;color:var(--gray-500);font-weight:600">대상자</div>
+          <div style="font-size:20px;font-weight:600;color:var(--gray-700)">${total}</div>
+        </div>
+      </div>
+      ${targets.length>0?`<div style="margin-top:8px">${targets.slice(0,3).map(t=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between"><span>${t.name||'이름없음'}</span><span style="color:${t.joined?'var(--success)':'var(--warning)'}">${t.joined?'입과':''+( t.joinPct||0)+'%'}</span></div>`).join('')}</div>`:''}
+    </div>`;
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+async function loadDashboard(){
+  const today=getToday();const month=getThisMonth();
+  let members,reports,consults,rates;
+  if(demoMode){
+    members=DEMO_MEMBERS.filter(m=>m.role==='member');reports=[];consults=DEMO_CONSULTS;rates=DEMO_RATES;
+  } else {
+    try{
+      const [mr,rr,cr,rateR]=await Promise.all([
+        sb.from('members').select('*').eq('role','member'),
+        sb.from('daily_reports').select('*').eq('report_date',today),
+        sb.from('consultations').select('*').gte('report_date',month+'-01'),
+        sb.from('conversion_rates').select('*'),
+      ]);
+      members=mr.data||[];reports=rr.data||[];consults=cr.data||[];rates=rateR.data||[];
+    }catch(e){toast('데이터 로딩 오류','error');return;}
+  }
+  const rateMap={};
+  rates.forEach(r=>rateMap[`${r.company_name}__${r.product_name}`]=r.rate);
+
+  const isAdmin=currentUser.role==='admin';
+  // 팀 합계 요약
+  const summaryEl=document.getElementById('dashSummary');
+  if(summaryEl){
+    const settings=getSettings();
+    const wStart=getWeekMonday();
+    const goalCanp=(settings.goal_canp||1000)*10000;
+    const goalNonlife=(settings.goal_nonlife||100)*10000;
+    const goalW=parseInt(settings.goal_3w)||3;
+    let teamCanp=0,teamNonlife=0,w3Count=0,inputCount=0;
+    members.forEach(m=>{
+      const mCons=consults.filter(c=>c.member_id===m.id);
+      mCons.filter(c=>c.insurance_type==='생명보험').forEach(c=>{const key=c.nonlife_company+'__'+c.product_name;teamCanp+=(c.monthly_premium||0)*(rateMap[key]||10);});
+      teamNonlife+=mCons.filter(c=>c.insurance_type==='손해보험'&&c.category!=='실비').reduce((s,c)=>s+(c.monthly_premium||0),0);
+      const weekClos=mCons.filter(c=>c.result==='클로징'&&c.report_date>=wStart&&(c.monthly_premium||0)>=10000&&(c.nl_type||c.category||'장기')!=='자동차');
+      if(weekClos.length>=goalW)w3Count++;
+      if(reports.find(r=>r.member_id===m.id))inputCount++;
+    });
+    const teamCanpMan=Math.round(teamCanp/10000);
+    const teamNonlifeMan=Math.round(teamNonlife/10000);
+    const canpPct=Math.min(100,Math.round((teamCanp/(goalCanp*members.length||1))*100));
+    summaryEl.innerHTML=`
+      <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow)">
+        <div style="font-size:10px;color:var(--gray-500);font-weight:600;margin-bottom:4px">팀 생명 CANP</div>
+        <div style="font-size:22px;font-weight:600;color:var(--primary)">${teamCanpMan.toLocaleString()}만</div>
+        <div style="font-size:11px;color:var(--gray-500);margin-bottom:3px">목표 ${(goalCanp/10000*members.length).toLocaleString()}만 (${canpPct}%)</div>
+        <div class="prog-wrap"><div class="prog-bar" style="width:${canpPct}%"></div></div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow)">
+        <div style="font-size:10px;color:var(--gray-500);font-weight:600;margin-bottom:4px">팀 손보 월납</div>
+        <div style="font-size:22px;font-weight:600;color:var(--success)">${teamNonlifeMan.toLocaleString()}만</div>
+        <div style="font-size:11px;color:var(--gray-500)">목표 ${goalNonlife/10000*members.length}만원</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow)">
+        <div style="font-size:10px;color:var(--gray-500);font-weight:600;margin-bottom:4px">${goalW}W 달성</div>
+        <div style="font-size:22px;font-weight:600;color:${w3Count>=members.length?'var(--success)':'var(--warning)'}">${w3Count}<span style="font-size:14px;color:var(--gray-500)">/${members.length}명</span></div>
+        <div style="font-size:11px;color:var(--gray-500)">이번주 기준</div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:12px;box-shadow:var(--shadow)">
+        <div style="font-size:10px;color:var(--gray-500);font-weight:600;margin-bottom:4px">오늘 활동 입력</div>
+        <div style="font-size:22px;font-weight:600;color:${inputCount>=members.length?'var(--success)':'var(--warning)'}">${inputCount}<span style="font-size:14px;color:var(--gray-500)">/${members.length}명</span></div>
+        <div style="font-size:11px;color:var(--gray-500)">${members.length-inputCount>0?'미입력 '+(members.length-inputCount)+'명':'전원 완료 ✅'}</div>
+      </div>
+    `;
+  }
+
+  // 팀원 카드
+  const el=document.getElementById('dashMemberCards');el.innerHTML='';
+  if(!members||members.length===0){el.innerHTML='<div class="empty-state"><div class="ei">👥</div><p>등록된 팀원이 없습니다</p></div>';return;}
+  // 테이블 헤더
+  const settings2=getSettings();
+  const goalW2=parseInt(settings2.goal_3w)||3;
+  el.innerHTML=`<div style="overflow-x:auto">
+    <table class="rank-table" style="min-width:700px">
+      <thead><tr>
+        <th style="min-width:130px">팀원</th>
+        <th>생명 CANP</th>
+        <th style="text-align:center">생명 건수</th>
+        <th style="text-align:center">손보월납</th>
+        <th style="text-align:center">${goalW2}W</th>
+        <th style="text-align:center">오늘상담</th>
+        <th style="text-align:center">활동</th>
+      </tr></thead>
+      <tbody id="dashMemberRows"></tbody>
+    </table>
+  </div>`;
+
+  const tbody=document.getElementById('dashMemberRows');
+  members.forEach(m=>{
+    const rep=reports.find(r=>r.member_id===m.id);
+    const mCons=consults.filter(c=>c.member_id===m.id);
+    const todayCons=[...new Map(mCons.filter(c=>c.report_date===today).map(c=>[c.consult_order,c])).values()];
+    const settings2=getSettings();
+    const goalW2=parseInt(settings2.goal_3w)||3;
+    const lifeClos=mCons.filter(c=>c.result==='클로징'&&c.insurance_type==='생명보험');
+    const nonlifeClos=mCons.filter(c=>c.result==='클로징'&&c.insurance_type==='손해보험'&&(c.nl_type||c.category)!=='실비'&&(c.monthly_premium||0)>=10000);
+    const weekStart=getWeekMonday();
+    const weekClosings=mCons.filter(c=>c.result==='클로징'&&c.report_date>=weekStart&&(c.monthly_premium||0)>=10000&&(c.nl_type||c.category||'장기')!=='자동차');
+    const wDone=weekClosings.length>=goalW2;
+    let lifeConv=0;
+    lifeClos.forEach(c=>{if(c.monthly_premium){const key=c.nonlife_company+'__'+c.product_name;const r=rateMap[key]||10;lifeConv+=c.monthly_premium*r;}});
+    const lifeConvMan=Math.round(lifeConv/10000);
+    const goalCanpMan=parseInt(settings2.goal_canp)||1000;
+    const canpPct=Math.min(100,Math.round((lifeConvMan/goalCanpMan)*100));
+    const nonlifeTotal=nonlifeClos.reduce((s,c)=>s+(c.monthly_premium||0),0);
+    const nonlifeMan=Math.round(nonlifeTotal/10000);
+    const nlByComp={};
+    nonlifeClos.forEach(c=>{if(c.nonlife_company&&c.monthly_premium)nlByComp[c.nonlife_company]=(nlByComp[c.nonlife_company]||0)+c.monthly_premium;});
+    const nlCompStr=Object.entries(nlByComp).sort((a,b)=>b[1]-a[1]).map(([co,amt])=>co+''+Math.round(amt/10000)+'만').join(' / ');
+
+    const statusBadge=rep?'<span class="badge green">완료</span>':'<span class="badge red">미입력</span>';
+    const wBadge=wDone?'<span class="badge green">✅</span>':'<span class="badge gray">❌</span>';
+
+    const tr=document.createElement('tr');
+    tr.style.cursor='pointer';
+    tr.innerHTML=`
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="m-avatar" style="width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${m.name}</div>
+            <div style="display:flex;gap:4px;margin-top:2px">${statusBadge}${rep&&rep.is_late?'<span class="badge red">지각</span>':''} ${rep&&rep.is_noreport?'<span class="badge amber">미보고</span>':''}</div>
+          </div>
+        </div>
+      </td>
+      <td>
+        <div style="font-size:13px;font-weight:600;color:var(--primary)">${lifeConvMan.toLocaleString()}만원</div>
+        <div style="font-size:10px;color:var(--gray-500);margin-bottom:2px">${goalCanpMan}만 목표 (${canpPct}%)</div>
+        <div class="prog-wrap" style="height:5px"><div class="prog-bar" style="width:${canpPct}%;height:5px"></div></div>
+      </td>
+      <td style="text-align:center">
+        <div style="font-size:14px;font-weight:600;color:var(--primary)">${lifeClos.length}건</div>
+        <div style="font-size:10px;color:var(--gray-500)">목표 ${parseInt(settings2.goal_count)||20}건</div>
+      </td>
+      <td style="text-align:center">
+        <div style="font-size:13px;font-weight:600;color:var(--success)">${nonlifeMan.toLocaleString()}만원</div>
+        <div style="font-size:10px;color:var(--gray-500)">${nlCompStr||'-'}</div>
+      </td>
+      <td style="text-align:center">${wBadge}<div style="font-size:10px;color:var(--gray-500)">${weekClosings.length}/${goalW2}건</div></td>
+      <td style="text-align:center">
+        <div style="font-size:14px;font-weight:600">${todayCons.length}건</div>
+      </td>
+      <td style="text-align:center">${statusBadge}</td>
+    `;
+    if(tbody)tbody.appendChild(tr);
+  });
+}
+function buildClientTree(memberName, consults){
+  // 계약자 기준 소개 관계 트리 생성
+  const clients=consults.filter(c=>c.result==='클로징'&&c.policyholder);
+  if(clients.length===0)return '';
+
+  // 소개 관계 맵 구성
+  const clientMap={};
+  clients.forEach(c=>{
+    if(!clientMap[c.policyholder])clientMap[c.policyholder]={referrer:c.referrer||'',products:[]};
+    clientMap[c.policyholder].products.push(c.product_name||c.insurance_type||'');
+  });
+
+  // 루트(직접 계약)와 소개받은 고객 분리
+  const roots=Object.entries(clientMap).filter(([,v])=>!v.referrer||!clientMap[v.referrer]);
+  const referred=Object.entries(clientMap).filter(([,v])=>v.referrer&&clientMap[v.referrer]);
+
+  if(roots.length===0)return '';
+
+  let html=`<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">`;
+  roots.forEach(([name,data])=>{
+    const children=Object.entries(clientMap).filter(([,v])=>v.referrer===name);
+    html+=`<div style="display:flex;flex-direction:column;align-items:center;gap:6px">`;
+    html+=`<div class="tree-box client" style="font-size:11px"><div>${name}</div><div class="tree-box-sub">${data.products.slice(0,2).join(', ')}</div></div>`;
+    if(children.length>0){
+      html+=`<div style="width:2px;height:12px;background:var(--gray-300)"></div>`;
+      html+=`<div style="display:flex;gap:6px">`;
+      children.forEach(([cname,cdata])=>{
+        html+=`<div class="tree-box client" style="font-size:10px;background:var(--success-light);border-color:var(--success);color:var(--success)"><div>${cname}</div><div class="tree-box-sub">소개</div></div>`;
+      });
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  return html;
+}
+
+function toggleMemberCard(id){
+  const body=document.getElementById(id);const arrow=document.getElementById('arrow-'+id);
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  if(arrow)arrow.textContent=isOpen?'▼':'▲';
+}
+
+// ===== 영업 현황 =====
+async function loadSales(){
+  const month=getThisMonth();let consults,rates,members;
+  if(demoMode){consults=DEMO_CONSULTS;rates=DEMO_RATES;members=DEMO_MEMBERS.filter(m=>m.role==='member');}
+  else{
+    try{
+      const [cr,rr,mr]=await Promise.all([
+        sb.from('consultations').select('*').eq('result','클로징').gte('report_date',month+'-01'),
+        sb.from('conversion_rates').select('*'),
+        sb.from('members').select('*').eq('role','member'),
+      ]);
+      consults=cr.data||[];rates=rr.data||[];members=mr.data||[];
+    }catch(e){toast('영업 현황 로딩 오류','error');return;}
+  }
+  const rateMap={};
+  rates.forEach(r=>rateMap[`${r.company_name}__${r.product_name}`]=r.rate);
+  const isAdmin=currentUser.role==='admin';
+  const weekStart=getWeekMonday();
+
+  // 생보 랭킹
+  const lifeByMember={};
+  consults.filter(c=>c.insurance_type==='생명보험').forEach(c=>{
+    if(!lifeByMember[c.member_name])lifeByMember[c.member_name]={conv:0,cnt:0};
+    const key=`${c.nonlife_company}__${c.product_name}`;
+    const r=rateMap[key]||10;
+    lifeByMember[c.member_name].conv+=(c.monthly_premium||0)*r;
+    lifeByMember[c.member_name].cnt++;
+  });
+  const lifeRanked=Object.entries(lifeByMember).sort((a,b)=>b[1].conv-a[1].conv);
+  const totalLifeConv=lifeRanked.reduce((s,[,v])=>s+v.conv,0);
+
+  const lifeEl=document.getElementById('lifeRankTable');
+  if(lifeRanked.length===0){lifeEl.innerHTML='<div class="empty-state"><div class="ei">📋</div><p>이번달 생명보험 클로징 데이터가 없습니다</p></div>';}
+  else{
+    const rankColors=['gold','silver','bronze'];
+    let html=`<table class="rank-table"><thead><tr><th>순위</th><th>팀원</th><th>건수</th><th style="color:var(--primary)">CANP</th><th>달성률 (1,550만 기준)</th></tr></thead><tbody>`;
+    lifeRanked.forEach(([name,d],i)=>{
+      const pct=Math.min(100,Math.round((d.conv/10000/1550)*100));
+      const convMan=Math.round(d.conv/10000);
+      html+=`<tr><td><span class="rank-num ${rankColors[i]||''}">${i+1}</span></td><td><strong>${name}</strong></td><td>${d.cnt}건</td>`;
+      html+=`<td style="color:var(--primary);font-weight:600">${convMan.toLocaleString()}만원</td>`;
+      html+=`<td style="min-width:160px"><div style="font-size:11px;color:var(--gray-500);margin-bottom:3px">${convMan.toLocaleString()}만원 / 1,550만원 (${pct}%)</div><div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div></td></tr>`;
+    });
+    html+=`<tr style="background:var(--primary-light)"><td colspan="3" style="font-weight:600;color:var(--primary)">팀 합계</td><td style="font-weight:600;color:var(--primary)">${Math.round(totalLifeConv/10000).toLocaleString()}만원</td><td></td></tr>`;
+    html+='</tbody></table>';
+    lifeEl.innerHTML=html;
+  }
+
+  // 손보 랭킹
+  const nonlifeByMember={};
+  // 실비 제외, 1만원 미만 제외, 화재·펫은 구간시책에서 제외
+  consults.filter(c=>c.insurance_type==='손해보험'&&(c.nl_type||c.category)!=='실비'&&(c.nl_type||c.category)!=='자동차'&&(c.monthly_premium||0)>=10000).forEach(c=>{
+    if(!nonlifeByMember[c.member_name])nonlifeByMember[c.member_name]={total:0,companies:{}};
+    nonlifeByMember[c.member_name].total+=(c.monthly_premium||0);
+    if(c.nonlife_company)nonlifeByMember[c.member_name].companies[c.nonlife_company]=(nonlifeByMember[c.member_name].companies[c.nonlife_company]||0)+(c.monthly_premium||0);
+  });
+  const nlRanked=Object.entries(nonlifeByMember).sort((a,b)=>b[1].total-a[1].total);
+  const totalNl=nlRanked.reduce((s,[,v])=>s+v.total,0);
+
+  const nlEl=document.getElementById('nonlifeRankTable');
+  if(nlRanked.length===0){nlEl.innerHTML='<div class="empty-state"><div class="ei">📋</div><p>이번달 손해보험 클로징 데이터가 없습니다</p></div>';}
+  else{
+    const rankColors=['gold','silver','bronze'];
+    let html='<table class="rank-table"><thead><tr><th>순위</th><th>팀원</th><th>월납 합계</th><th>회사별 현황 (10만원 단위)</th></tr></thead><tbody>';
+    nlRanked.forEach(([name,d],i)=>{
+      const totalMan=Math.round(d.total/10000);
+      const compRows=Object.entries(d.companies)
+        .sort((a,b)=>b[1]-a[1])
+        .map(([co,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:11px;color:var(--gray-700)">${co}</span><span style="font-size:11px;font-weight:600;color:var(--success)">${Math.round(amt/10000).toLocaleString()}만원</span></div>`).join('');
+      html+=`<tr>
+        <td><span class="rank-num ${rankColors[i]||''}">${i+1}</span></td>
+        <td><strong>${name}</strong></td>
+        <td style="font-weight:600;color:var(--success);white-space:nowrap">${totalMan.toLocaleString()}만원</td>
+        <td><div style="min-width:180px">${compRows}</div></td>
+      </tr>`;
+    });
+    html+=`<tr style="background:var(--success-light)"><td colspan="2" style="font-weight:600;color:var(--success)">팀 합계</td><td style="font-weight:600;color:var(--success)">${Math.round(totalNl/10000).toLocaleString()}만원</td><td></td></tr>`;
+    html+='</tbody></table>';
+    nlEl.innerHTML=html;
+  }
+
+  // 개인 목표 현황
+  const goalEl=document.getElementById('goalProgress');
+  if(!members||members.length===0){goalEl.innerHTML='<div class="empty-state"><p>팀원 없음</p></div>';return;}
+  let goalHtml='';
+  members.forEach(m=>{
+    const mCons=consults.filter(c=>c.member_id===m.id);
+    const weekClosings=mCons.filter(c=>c.result==='클로징'&&c.report_date>=weekStart&&(c.monthly_premium||0)>=10000&&(c.nl_type||c.category||'장기')!=='자동차');
+    const w3Done=weekClosings.length>=3;
+    const lifeData=lifeByMember[m.name]||{conv:0,cnt:0};
+    // 구간시책용: 실비+화재펫 제외, 1만원 이상
+    const nlForGoal=mCons.filter(c=>c.result==='클로징'&&c.insurance_type==='손해보험'&&(c.nl_type||c.category)!=='실비'&&(c.nl_type||c.category)!=='화재·펫'&&(c.monthly_premium||0)>=10000);
+    const nlData={total:nlForGoal.reduce((s,c)=>s+(c.monthly_premium||0),0),companies:{}};
+    nlForGoal.forEach(c=>{if(c.nonlife_company)nlData.companies[c.nonlife_company]=(nlData.companies[c.nonlife_company]||0)+(c.monthly_premium||0);});
+    const lifeConvMan=Math.round(lifeData.conv/10000);
+    const nlMan=Math.round(nlData.total/10000);
+    const lifePct=Math.min(100,Math.round((lifeConvMan/1550)*100));
+    const nlCompData=nlData.companies||{};
+    const nlCompRows=Object.keys(nlCompData).length===0
+      ?'<div style="font-size:11px;color:var(--gray-500)">데이터 없음</div>'
+      :Object.entries(nlCompData).sort((a,b)=>b[1]-a[1]).map(([co,amt])=>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid var(--gray-100)"><span style="font-size:11px;color:var(--gray-700)">${co}</span><span style="font-size:11px;font-weight:600;color:var(--success)">${Math.round(amt/10000).toLocaleString()}만원</span></div>`
+      ).join('');
+
+    goalHtml+=`<div style="border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+        <div class="m-avatar" style="width:28px;height:28px;font-size:11px">${initials(m.name)}</div>${m.name}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="goal-section">
+          <div class="goal-title">📅 이번주 3W</div>
+          <div style="font-size:22px;font-weight:700;color:${w3Done?'var(--success)':'var(--danger)'}">${w3Done?'✅':'❌'}</div>
+          <div style="font-size:11px;color:var(--gray-500)">1만원↑ 계약 ${weekClosings.length}건</div>
+        </div>
+        <div class="goal-section">
+          <div class="goal-title">💼 생명 CANP</div>
+          <div style="font-size:18px;font-weight:700;color:var(--primary)">${lifeConvMan.toLocaleString()}만</div><div style="font-size:11px;color:var(--gray-500)">목표 1,550만 (${lifePct}%)</div><div class="prog-wrap" style="margin-top:4px"><div class="prog-bar" style="width:${lifePct}%"></div></div>
+        </div>
+        <div class="goal-section">
+          <div class="goal-title">🏥 손보 월납</div>
+          <div style="font-size:18px;font-weight:700;color:var(--success)">${nlMan}만원</div>
+          <div style="font-size:11px;color:var(--gray-500)">목표 100만원</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-700);margin-bottom:6px">손해보험 보험사별 현황</div>
+        ${nlCompRows}
+      </div>
+    </div>`;
+  });
+  goalEl.innerHTML=goalHtml;
+}
+
+// ===== 관리자 =====
+async function loadAdmin(){
+  loadGoals();
+  // 환산율 로드 (상품별)
+  const rates=demoMode?DEMO_RATES:(await sb.from('conversion_rates').select('*').catch(()=>({data:[]}))).data||[];
+  const rateEl=document.getElementById('rateList');
+  if(rateEl){
+    rateEl.innerHTML='';
+    if(rates.length===0){rateEl.innerHTML='<div class="empty-state" style="padding:12px"><p>등록된 환산율이 없습니다</p></div>';}
+    rates.forEach(r=>{
+      const div=document.createElement('div');div.className='rate-row';
+      div.innerHTML=`<div class="rate-company">${r.company_name} — ${r.product_name||''}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" data-id="${r.id}" value="${r.rate}" min="1" max="100" style="width:70px" />
+          <span style="font-size:12px;color:var(--gray-500)">배</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteRate('${r.id}')">삭제</button>
+        </div>`;
+      rateEl.appendChild(div);
+    });
+  }
+}
+
+async function addRate(){
+  const company=document.getElementById('new_rateCompany').value.trim();
+  const product=document.getElementById('new_rateProduct').value.trim();
+  const rate=parseFloat(document.getElementById('new_rateVal').value)||10;
+  if(!company||!product){toast('보험사와 상품명을 입력하세요','error');return;}
+  if(demoMode){DEMO_RATES.push({id:'r'+Date.now(),company_name:company,product_name:product,rate});toast('추가 완료 (데모)','success');loadAdmin();return;}
+  try{await sb.from('conversion_rates').insert({company_name:company,product_name:product,rate});toast('환산율 추가 완료','success');loadAdmin();}
+  catch(e){toast('추가 오류','error');}
+}
+
+async function deleteRate(id){
+  if(!confirm('삭제하시겠습니까?'))return;
+  if(demoMode){const idx=DEMO_RATES.findIndex(r=>r.id===id);if(idx>-1)DEMO_RATES.splice(idx,1);toast('삭제 완료 (데모)','success');loadAdmin();return;}
+  try{await sb.from('conversion_rates').delete().eq('id',id);toast('삭제 완료','success');loadAdmin();}
+  catch(e){toast('삭제 오류','error');}
+}
+
+async function saveRates(){
+  if(demoMode){toast('데모 모드에서는 저장되지 않습니다','info');return;}
+  showLoading(true);
+  try{
+    const inputs=document.querySelectorAll('#rateList input[data-id]');
+    for(const inp of inputs){await sb.from('conversion_rates').update({rate:parseFloat(inp.value)||10}).eq('id',inp.dataset.id);}
+    toast('환산율 저장 완료','success');
+  }catch(e){toast('저장 오류','error');}
+  showLoading(false);
+}
+
+async function loadProductManage(){
+  if(demoMode){
+    productCache.life=DEMO_PRODUCTS.life||[];
+    renderLifeProductList(DEMO_PRODUCTS.life||[], DEMO_RATES||[]);
+    return;
+  }
+  try{
+    const [pr,rr]=await Promise.all([
+      sb.from('products').select('*').eq('type','life').order('product'),
+      sb.from('conversion_rates').select('*'),
+    ]);
+    const prods=pr.data||[];
+    const rates=rr.data||[];
+    // productCache 갱신 → 생명보험 드롭다운에 즉시 반영
+    productCache.life=prods;
+    renderLifeProductList(prods,rates);
+    renderLifeTable();
+  }catch(e){toast('로딩 오류','error');}
+}
+
+function renderLifeProductList(prods,rates){
+  const el=document.getElementById('lifeProductList');
+  if(!el)return;
+  if(prods.length===0){el.innerHTML='<div class="empty-state" style="padding:12px"><p>등록된 생명보험 상품이 없습니다</p></div>';return;}
+  const rateMap={};rates.forEach(r=>rateMap[r.product_name]=r.rate);
+  el.innerHTML='<div style="overflow-x:auto"><table class="data-table" style="min-width:400px"><thead><tr><th>상품명</th><th style="text-align:center;width:90px">환산율 (%)</th><th style="width:60px"></th></tr></thead><tbody>'
+    +prods.map(p=>`<tr>
+      <td style="font-size:12px">${p.product}</td>
+      <td style="text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:3px"><input type="number" value="${rateMap[p.product]||10}" onchange="updateProductRate('${p.product}',this.value)" style="width:50px;text-align:center;border:1px solid var(--gray-200);border-radius:4px;padding:2px 4px;font-size:12px" /><span style="font-size:12px;color:var(--gray-500)">%</span></div></td>
+      <td style="text-align:center"><button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px" onclick="deleteLifeProduct('${p.id}','${p.product}')">삭제</button></td>
+    </tr>`).join('')
+    +'</tbody></table></div>';
+}
+
+async function updateProductRate(productName, rate){
+  if(demoMode){toast('데모 모드','info');return;}
+  try{
+    await sb.from('conversion_rates').upsert({company_name:productName.split(' ')[0]||productName,product_name:productName,rate:parseInt(rate)||10},{onConflict:'product_name'});
+    toast('환산율 저장 완료','success');
+  }catch(e){toast('저장 오류','error');}
+}
+
+async function deleteLifeProduct(id,productName){
+  if(!confirm(productName+' 상품을 삭제하시겠습니까?'))return;
+  if(demoMode){
+    DEMO_PRODUCTS.life=(DEMO_PRODUCTS.life||[]).filter(p=>p.id!==id);
+    productCache.life=DEMO_PRODUCTS.life;
+    loadProductManage();
+    renderLifeTable();
+    toast('삭제 완료 (데모)','success');
+    return;
+  }
+  try{
+    await sb.from('products').delete().eq('id',id);
+    await sb.from('conversion_rates').delete().eq('product_name',productName);
+    productCache.life=(productCache.life||[]).filter(p=>p.id!==id);
+    loadProductManage();
+    renderLifeTable();
+    toast('삭제 완료','success');
+  }catch(e){toast('삭제 오류','error');}
+}
+
+async function addLifeProduct(){
+  const prod=document.getElementById('new_lifeProd')?.value.trim();
+  const rate=parseInt(document.getElementById('new_lifeRate')?.value)||10;
+  if(!prod){toast('상품명을 입력하세요','error');return;}
+  const company=prod.split(' ')[0]||prod;
+  if(demoMode){
+    if(!DEMO_PRODUCTS.life)DEMO_PRODUCTS.life=[];
+    const newItem={id:'lp'+Date.now(),company,product:prod,type:'life'};
+    DEMO_PRODUCTS.life.push(newItem);
+    if(!DEMO_RATES)DEMO_RATES=[];
+    DEMO_RATES.push({company_name:company,product_name:prod,rate});
+    productCache.life=DEMO_PRODUCTS.life;
+    document.getElementById('new_lifeProd').value='';
+    document.getElementById('new_lifeRate').value='';
+    loadProductManage();renderLifeTable();
+    toast('추가 완료 (데모) — 생명보험 드롭다운에 반영됐습니다','success');
+    return;
+  }
+  try{
+    const {data:pd,error:pe}=await sb.from('products').insert({company,product:prod,type:'life'}).select().single();
+    if(pe)throw pe;
+    const {error:re}=await sb.from('conversion_rates').insert({company_name:company,product_name:prod,rate});
+    if(re)throw re;
+    if(!productCache.life)productCache.life=[];
+    productCache.life.push({id:pd.id,company,product:prod,type:'life'});
+    document.getElementById('new_lifeProd').value='';
+    document.getElementById('new_lifeRate').value='';
+    loadProductManage();renderLifeTable();
+    toast('상품 추가 완료 — 생명보험 드롭다운에 반영됐습니다','success');
+  }catch(e){toast('추가 오류: '+e.message,'error');}
+}
+
+async function addProduct(type){
+  const co=document.getElementById(`new_${type==='life'?'life':'nonlife'}Company`).value.trim();
+  const pr=document.getElementById(`new_${type==='life'?'life':'nonlife'}Product`).value.trim();
+  if(!co||!pr){toast('보험사명과 상품명을 입력하세요','error');return;}
+  if(demoMode){DEMO_PRODUCTS[type].push({id:'dp'+Date.now(),company:co,product:pr,type});toast('추가 완료 (데모)','success');loadProductManage();return;}
+  try{await sb.from('products').insert({company:co,product:pr,type});toast('상품 추가 완료','success');loadProductManage();}
+  catch(e){toast('추가 오류','error');}
+}
+
+async function deleteProduct(id,type){
+  if(!confirm('삭제하시겠습니까?'))return;
+  if(demoMode){const idx=DEMO_PRODUCTS[type].findIndex(p=>p.id===id);if(idx>-1)DEMO_PRODUCTS[type].splice(idx,1);toast('삭제 완료 (데모)','success');loadProductManage();return;}
+  try{await sb.from('products').delete().eq('id',id);toast('삭제 완료','success');loadProductManage();}
+  catch(e){toast('삭제 오류','error');}
+}
+
+async function loadMemberManage(){
+  loadOrgEditor();
+  const members=demoMode?DEMO_MEMBERS.filter(m=>m.role==='member'):(await sb.from('members').select('*').eq('role','member').catch(()=>({data:[]}))).data||[];
+  const el=document.getElementById('memberManageList');el.innerHTML='';
+  if(members.length===0){el.innerHTML='<div class="empty-state"><p>등록된 팀원이 없습니다</p></div>';return;}
+  members.forEach(m=>{
+    const div=document.createElement('div');
+    div.style.cssText='padding:12px 0;border-bottom:1px solid var(--gray-100)';
+    div.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div class="m-avatar" style="width:30px;height:30px;font-size:11px">${initials(m.name)}</div>
+        <div style="font-size:13px;font-weight:600;flex:1">${m.name}</div>
+        <button class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}','${m.name}')">삭제</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:flex-end">
+        <div>
+          <div class="field-label">아이디</div>
+          <input type="text" id="uid_${m.id}" value="${m.username}" placeholder="아이디" />
+        </div>
+        <div>
+          <div class="field-label">비밀번호</div>
+          <input type="password" id="pw_${m.id}" placeholder="변경할 비밀번호 입력" />
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveMemberCredentials('${m.id}','${m.name}')">저장</button>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+async function saveMemberCredentials(id,name){
+  const uid=document.getElementById('uid_'+id)?.value.trim();
+  const pw=document.getElementById('pw_'+id)?.value.trim();
+  if(!uid){toast('아이디를 입력하세요','error');return;}
+  if(demoMode){toast('데모 모드에서는 변경 불가','info');return;}
+  const updateData={username:uid};
+  if(pw)updateData.password_hash=pw;
+  try{
+    await sb.from('members').update(updateData).eq('id',id);
+    toast(name+' 정보 저장 완료','success');
+    document.getElementById('pw_'+id).value='';
+  }catch(e){toast('저장 오류: '+e.message,'error');}
+}
+
+async function addMember(){
+  const name=document.getElementById('new_name').value.trim();const uid=document.getElementById('new_uid').value.trim();const pw=document.getElementById('new_pw').value.trim();
+  if(!name||!uid||!pw){toast('모든 항목 입력','error');return;}
+  if(demoMode){toast('데모 모드에서는 추가되지 않습니다','info');return;}
+  showLoading(true);
+  try{await sb.from('members').insert({username:uid,password_hash:pw,name,role:'member'});toast(`${name} 추가 완료`,'success');document.getElementById('new_name').value='';document.getElementById('new_uid').value='';document.getElementById('new_pw').value='';loadMemberManage();}
+  catch(e){toast('오류: '+e.message,'error');}
+  showLoading(false);
+}
+
+async function resetPw(id,name){
+  const pw=prompt(`${name}의 새 비밀번호:`);if(!pw)return;
+  if(demoMode){toast('데모 모드에서는 변경 불가','info');return;}
+  await sb.from('members').update({password_hash:pw}).eq('id',id);toast(`${name} 비밀번호 변경 완료`,'success');
+}
+
+async function deleteMember(id,name){
+  if(!confirm(`${name} 팀원을 삭제하시겠습니까?`))return;
+  if(demoMode){toast('데모 모드에서는 삭제 불가','info');return;}
+  await sb.from('members').delete().eq('id',id);toast(`${name} 삭제 완료`,'success');loadMemberManage();
+}
+
+async function changeAdminPw(){
+  const newId=document.getElementById('admin_current_id')?.value.trim();
+  const p1=document.getElementById('admin_pw1').value.trim();
+  const p2=document.getElementById('admin_pw2').value.trim();
+  if(p1&&p1!==p2){toast('비밀번호가 일치하지 않습니다','error');return;}
+  if(!newId&&!p1){toast('변경할 아이디 또는 비밀번호를 입력하세요','error');return;}
+  if(demoMode){toast('데모 모드에서는 변경 불가','info');return;}
+  const updateData={};
+  if(newId)updateData.username=newId;
+  if(p1)updateData.password_hash=p1;
+  await sb.from('members').update(updateData).eq('id',currentUser.id);
+  toast('계정 정보 변경 완료 — 다시 로그인해주세요','success');
+  setTimeout(doLogout,1500);
+}
+
+function loadConfig(){
+  document.getElementById('cfg_url').value=SUPABASE_URL;
+  document.getElementById('cfg_key').value=SUPABASE_ANON_KEY;
+  document.getElementById('dbStatus').textContent=demoMode?'❌ 데모 모드':'✅ 연결됨';
+  document.getElementById('dbStatus').style.color=demoMode?'var(--danger)':'var(--success)';
+  // 현재 아이디 표시
+  const adminIdEl=document.getElementById('admin_current_id');
+  if(adminIdEl)adminIdEl.value=currentUser?.username||'';
+}
+
+function saveSupabaseConfig(){
+  SUPABASE_URL=document.getElementById('cfg_url').value.trim();
+  SUPABASE_ANON_KEY=document.getElementById('cfg_key').value.trim();
+  localStorage.setItem('sb_url',SUPABASE_URL);localStorage.setItem('sb_key',SUPABASE_ANON_KEY);
+  initSupabase();toast('저장 완료. 다시 로그인하세요','success');setTimeout(doLogout,1500);
+}
+
+// ===== 초기화 =====
+document.getElementById('todayStr').textContent='';
+
+// 저장된 아이디 불러오기
+(function(){
+  const savedId=localStorage.getItem('saved_id');
+  if(savedId){
+    document.getElementById('loginId').value=savedId;
+    const chk=document.getElementById('saveIdChk');
+    if(chk)chk.checked=true;
+  }
+})();
+
+// ===== 오늘 할일 (어제 투두) 렌더 =====
+function renderTodayTodos(){
+  const el=document.getElementById('todayTodoList');
+  if(!el)return;
+  if(todos.length===0){
+    el.innerHTML='<div style="font-size:12px;color:var(--gray-500);text-align:center;padding:20px">근무태도 탭에서 내일 할 일을 추가하세요</div>';
+    return;
+  }
+  el.innerHTML='';
+  todos.forEach((t,i)=>{
+    // status: 0=미완료, 1=진행중, 2=완료
+    const status=t.status||0;
+    const bgColors=['#fff','#fdf2e3','var(--gray-50)'];
+    const borderColors=['var(--gray-200)','#f0a500','var(--gray-300)'];
+    const labels=['','🔄 진행중','✅ 완료'];
+    const div=document.createElement('div');
+    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:8px 10px;background:${bgColors[status]};border:1.5px solid ${borderColors[status]};border-radius:var(--radius);margin-bottom:6px;cursor:pointer;transition:all .15s`;
+    div.title='한번 클릭: 진행중 / 두번 클릭: 완료';
+    div.onclick=()=>touchTodo(i);
+    const textStyle=status===2?'flex:1;font-size:13px;text-decoration:line-through;color:var(--gray-400)':'flex:1;font-size:13px';
+    div.innerHTML=`
+      <span style="${textStyle}">${t.text}</span>
+      ${status>0?`<span style="font-size:11px;font-weight:600;color:${status===1?'var(--warning)':'var(--gray-400)'};">${labels[status]}</span>`:''}
+    `;
+    el.appendChild(div);
+  });
+}
+function touchTodo(idx){
+  const current=todos[idx].status||0;
+  todos[idx].status=(current+1)%3;
+  renderTodayTodos();
+  renderTodos();
+}
+
+// ===== 삼성 캘린더 알람 =====
+function addToCalendar(n){
+  const date=document.getElementById('c'+n+'_alarmDate')?.value;
+  const time=document.getElementById('c'+n+'_alarmTime')?.value;
+  const memo=document.getElementById('c'+n+'_alarmMemo')?.value||'보험 상담 일정';
+  const name=document.getElementById('c'+n+'_policyholder')?.value||'고객';
+  if(!date||!time){toast('날짜와 시간을 입력하세요','error');return;}
+
+  const title='[보험] '+name+' - '+memo;
+  const startMs=new Date(date+'T'+time+':00').getTime();
+  const endMs=startMs+60*60*1000; // 1시간 후
+
+  // 날짜 포맷 (yyyyMMddTHHmmss)
+  function toCalDt(ms){
+    const d=new Date(ms);
+    const pad=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  }
+  const startDt=toCalDt(startMs);
+  const endDt=toCalDt(endMs);
+
+  const isAndroid=/Android/i.test(navigator.userAgent);
+  const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if(isAndroid){
+    // Android: Intent URL로 삼성캘린더에 직접 전달
+    const intentUrl='intent://com.android.calendar/events#Intent;'
+      +'action=android.intent.action.INSERT;'
+      +'S.title='+encodeURIComponent(title)+';'
+      +'S.description='+encodeURIComponent(memo)+';'
+      +'S.beginTime='+startMs+';'
+      +'S.endTime='+endMs+';'
+      +'S.allDay=false;'
+      +'end';
+    // Android 네이티브 캘린더 intent
+    const nativeUrl='intent://addEvent#Intent;scheme=content;'
+      +'package=com.samsung.android.calendar;'
+      +'S.title='+encodeURIComponent(title)+';'
+      +'S.description='+encodeURIComponent(memo)+';'
+      +'S.beginTime='+startMs+';'
+      +'S.endTime='+endMs+';'
+      +'end';
+    // 삼성 캘린더 직접 intent 시도, 실패시 구글캘린더
+    const link=document.createElement('a');
+    link.href=nativeUrl;
+    link.click();
+    setTimeout(()=>{
+      // 백업: 구글 캘린더
+      const gcal='https://www.google.com/calendar/render?action=TEMPLATE'
+        +'&text='+encodeURIComponent(title)
+        +'&dates='+startDt+'/'+endDt
+        +'&details='+encodeURIComponent(memo);
+      toast('캘린더 앱이 열립니다. 앱이 안 열리면 구글 캘린더로 이동합니다.','info');
+    },1500);
+  } else if(isIOS){
+    // iOS: webcal / 기본 캘린더
+        const icsContent='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Power8Team//KO\r\nBEGIN:VEVENT\r\nDTSTART:'+startDt+'\r\nDTEND:'+endDt+'\r\nSUMMARY:'+title+'\r\nDESCRIPTION:'+memo+'\r\nEND:VEVENT\r\nEND:VCALENDAR';
+    const blob=new Blob([icsContent],{type:'text/calendar;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='alarm.ics';a.click();
+    toast('캘린더 파일이 다운로드됩니다. 열면 자동으로 추가됩니다.','success');
+  } else {
+    // PC: 구글 캘린더
+    const gcal='https://www.google.com/calendar/render?action=TEMPLATE'
+      +'&text='+encodeURIComponent(title)
+      +'&dates='+startDt+'/'+endDt
+      +'&details='+encodeURIComponent(memo);
+    window.open(gcal,'_blank');
+    toast('구글 캘린더가 열렸습니다. 저장 버튼을 눌러주세요.','info');
+  }
+}
+</script>
+</body>
+</html>
